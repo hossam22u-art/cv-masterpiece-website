@@ -1,0 +1,36 @@
+name: Restore website layout after language switch issue
+on:
+  push:
+    paths:
+      - '.github/workflows/restore-language-layout.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  restore-layout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove broken language injection and restore original layout
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const file = 'index.html.html';
+          let html = fs.readFileSync(file, 'utf8');
+          const before = html;
+          html = html.replace(/<script id="cvm-auto-language-switch">[\\s\\S]*?<\\/script>\\s*/i, '');
+          if (html === before) {
+            console.log('No injected language script found; nothing to remove.');
+          } else {
+            fs.writeFileSync(file, html);
+            console.log('Removed the incomplete language switch and global RTL changes.');
+          }
+          NODE
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html.html
+          if git diff --cached --quiet; then echo "No changes to commit"; exit 0; fi
+          git commit -m "Remove broken automatic language injection"
+          git push
