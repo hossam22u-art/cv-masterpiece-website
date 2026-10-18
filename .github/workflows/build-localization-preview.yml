@@ -1,0 +1,97 @@
+name: Build bilingual localization preview
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/build-localization-preview.yml'
+permissions:
+  contents: write
+jobs:
+  build-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: bilingual-localization-preview
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Generate isolated preview page
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const sourcePath = 'index.html.html';
+          let html = fs.readFileSync(sourcePath, 'utf8');
+          const dict = {
+            'CV Templates':'قوالب السيرة الذاتية','Our Experts':'فريق الخبراء','Client Feedback':'آراء العملاء','Services':'الخدمات','Portfolio':'معرض الأعمال','For Companies':'للشركات','How It Works':'كيف نعمل','Contact':'تواصل معنا','Saudi Arabia · SAR':'السعودية · ريال','Egypt · EGP':'مصر · جنيه','UAE · AED':'الإمارات · درهم','Start an Order':'ابدأ طلبك',
+            'PROFESSIONAL CAREER BRANDING STUDIO':'استوديو احترافي لبناء هويتك المهنية','TURN YOUR':'حوّل','EXPERIENCE':'خبراتك','INTO':'إلى','OPPORTUNITIES.':'فرص حقيقية.','Career services, job search support and digital growth — crafted to help people and brands move forward.':'خدمات مهنية ودعم للبحث عن عمل وحلول للنمو الرقمي، مصممة لمساعدة الأفراد والعلامات التجارية على التقدم.','CV & Career Branding':'السيرة الذاتية والهوية المهنية','Job Search Support':'دعم البحث عن وظيفة','Digital Growth':'النمو الرقمي','Explore Services':'اكتشف الخدمات','View Our Work':'شاهد أعمالنا','Built around your next opportunity':'مصممة لفرصتك القادمة','CAREER IDENTITY':'هويتك المهنية','Designed around you':'مصممة خصيصًا لك','YOUR NEXT CHAPTER':'فصلك القادم','Starts with your story.':'يبدأ بقصتك.','SCROLL TO DISCOVER':'مرّر لاكتشاف المزيد','Personalized career solutions':'حلول مهنية مخصصة','Individual & business services':'خدمات للأفراد والشركات','Regional pricing options':'أسعار حسب الدولة','Room to grow with you':'ننمو معك خطوة بخطوة',
+            'WHAT WE DO':'ماذا نقدم','One partner.':'شريك واحد.','More possibilities.':'فرص أكثر.','From a standout CV to a complete digital presence, choose the service you need or combine services into a package.':'من سيرة ذاتية مميزة إلى حضور رقمي متكامل، اختر الخدمة التي تحتاجها أو اجمع الخدمات في باقة واحدة.','Not sure where to start?':'مش متأكد تبدأ منين؟','Build your service plan ↗':'كوّن باقة خدماتك ↗','CV WRITING STUDIO':'استوديو كتابة السيرة الذاتية','CHOOSE YOUR CV FORMAT':'اختر نوع السيرة الذاتية','One career.':'مسار مهني واحد.','Four CV formats.':'أربعة أنواع للسيرة الذاتية.','Choose the CV type and language you need. Individual service prices remain unpublished until approved for Egypt; the three confirmed bundles below show their approved EGP prices.':'اختر نوع السيرة الذاتية واللغة المناسبة لك. أسعار الخدمات الفردية في مصر لم تُعتمد بعد؛ الباقات الثلاث الموضحة أدناه هي الأسعار المعتمدة بالجنيه المصري.','Preview language options':'معاينة خيارات اللغة','All supported languages':'كل اللغات المتاحة','Arabic':'العربية','English':'الإنجليزية','French':'الفرنسية','Arabic + English':'العربية + الإنجليزية','Other languages — confirm availability':'لغات أخرى — يرجى تأكيد التوفر','Language availability depends on the selected CV format.':'توفر اللغات يعتمد على نوع السيرة الذاتية المختار.','Egypt CV bundles':'باقات السيرة الذاتية في مصر','Approved prices · Egyptian pound (EGP)':'الأسعار المعتمدة · الجنيه المصري (EGP)',
+            'PORTFOLIO STUDIO · OFFLINE & ONLINE':'استوديو البورتفوليو · أوفلاين وأونلاين','Your work.':'أعمالك.','Your story.':'قصتك.','Your next step.':'خطوتك القادمة.','Choose a polished offline portfolio or an online portfolio that presents your experience, projects and achievements professionally.':'اختر بورتفوليو احترافيًا مطبوعًا أو أونلاين يعرض خبراتك ومشروعاتك وإنجازاتك بشكل مميز.','Important pricing note:':'ملاحظة مهمة عن الأسعار:','Request a portfolio':'اطلب بورتفوليو','Offline Portfolio':'بورتفوليو أوفلاين','Online Portfolio':'بورتفوليو أونلاين','Starting from':'يبدأ من','JOB PLATFORM FOLLOW-UP':'متابعة منصات التوظيف','Stay in the':'استمر في','running.':'المنافسة.','Monthly Follow-up':'متابعة شهرية','Quarterly Follow-up':'متابعة لمدة 3 أشهر','6-Month Follow-up':'متابعة لمدة 6 أشهر','Follow-up service for one job platform':'خدمة متابعة لمنصة توظيف واحدة','Each additional platform:':'كل منصة إضافية:','Choose monthly ↗':'اختر الشهري ↗','Choose 3 months ↗':'اختر 3 أشهر ↗','Choose 6 months ↗':'اختر 6 أشهر ↗',
+            'FOR BRANDS & BUSINESSES':'للعلامات التجارية والشركات','Grow your brand':'طوّر علامتك التجارية','with intention.':'بخطة واضحة.','Monthly social media management designed around your goals, channels and content needs.':'إدارة شهرية للسوشيال ميديا مصممة حسب أهدافك وقنواتك واحتياجات المحتوى.','Starter':'الأساسية','Growth':'النمو','Premium':'المميزة','Content planning':'تخطيط المحتوى','Page management and publishing':'إدارة الصفحات والنشر','Meeting booking fee':'رسوم حجز الاجتماع','Book a meeting · EGP 200 ↗':'احجز اجتماعًا · 200 جنيه ↗','PROOF OF WORK · CLIENT EXPERIENCE':'نماذج الأعمال وتجربة العملاء','Real work.':'أعمال حقيقية.','Real trust.':'ثقة حقيقية.','Career documents':'مستندات مهنية','Online & offline portfolios':'بورتفوليو أونلاين وأوفلاين','Brand & social content':'محتوى العلامات التجارية والسوشيال ميديا',
+            'CV MASTERPIECE · OUR TEAM':'فريق CV Masterpiece','Choose your':'اختر','career expert.':'خبيرك المهني.','Work with the specialist who best fits your needs. Select an expert and your preference will be added to your order request.':'تعاون مع المتخصص الأنسب لاحتياجاتك. اختر خبيرًا وسيُضاف اختيارك إلى طلبك.','CV & JOB PLATFORMS':'السيرة الذاتية ومنصات التوظيف','Choose Fares ↗':'اختر فارس ↗','JOB PLATFORM MANAGEMENT':'إدارة منصات التوظيف','Choose Mohamed ↗':'اختر محمد ↗','Choose Yasmine ↗':'اختر ياسمين ↗','PORTFOLIO SPECIALIST':'متخصص بورتفوليو','Portfolio creation services only.':'خدمات إنشاء البورتفوليو فقط.','Choose Hossam ↗':'اختر حسام ↗','REAL CLIENT EXPERIENCES':'تجارب عملائنا الحقيقية','Our clients.':'عملاؤنا.','Their feedback.':'وآراؤهم.','View feedback ↗':'شاهد آراء العملاء ↗','View post ↗':'شاهد المنشور ↗','View messages ↗':'شاهد الرسائل ↗','Watch video ↗':'شاهد الفيديو ↗','View All Feedback on Linktree ↗':'شاهد كل الآراء على Linktree ↗',
+            'CV MASTERPIECE · TEMPLATE LIBRARY':'مكتبة قوالب CV Masterpiece','CV template.':'قالب سيرة ذاتية.','Explore the full template collections, preview designs, search styles, and use the available CV tools.':'استكشف مجموعات القوالب، وشاهد التصميمات، وابحث عن الأنماط، واستخدم أدوات السيرة الذاتية المتاحة.','ENGLISH COLLECTION':'المجموعة الإنجليزية','Complete CV Template Collection':'مجموعة قوالب السيرة الذاتية الكاملة','Explore English Templates ↗':'استكشف القوالب الإنجليزية ↗','ARABIC COLLECTION':'المجموعة العربية','Arabic CV Templates':'قوالب سيرة ذاتية عربية','Explore Arabic Templates ↗':'استكشف القوالب العربية ↗',
+            'A CLEAR PROCESS':'خطوات واضحة','From brief to':'من طلبك إلى','better.':'نتيجة أفضل.','Choose':'اختر','Select services, language and market.':'حدد الخدمات واللغة والسوق.','Customize':'خصص','Review scope, options and confirmed price.':'راجع التفاصيل والخيارات والسعر المعتمد.','Collaborate':'تعاون','Share your details and work with our team.':'شارك بياناتك واعمل مع فريقنا.','Move forward':'انطلق','Receive deliverables and agreed updates.':'استلم الملفات والتحديثات المتفق عليها.','YOUR NEXT CHAPTER STARTS HERE':'فصلك القادم يبدأ هنا','Ready to make':'هل أنت مستعد لـ','your next move?':'خطوتك القادمة؟','Tell us what you need. We\'ll help you find the right service.':'أخبرنا بما تحتاجه وسنساعدك في اختيار الخدمة المناسبة.','CONTACT & ORDER SUPPORT':'التواصل ودعم الطلبات','Talk to our team':'تحدث مع فريقنا','Start an order ↗':'ابدأ طلبك ↗','✉ Email us':'✉ راسلنا بالبريد','🇪🇬 WhatsApp Egypt':'🇪🇬 واتساب مصر','🇸🇦 WhatsApp Saudi Arabia':'🇸🇦 واتساب السعودية','🇦🇪 WhatsApp UAE':'🇦🇪 واتساب الإمارات','WE\'RE ONE MESSAGE AWAY':'نحن على بُعد رسالة واحدة','Connect with':'تواصل مع','CV Masterpiece.':'CV Masterpiece.','Facebook':'فيسبوك','Follow our page':'تابع صفحتنا','Instagram':'إنستجرام','TikTok':'تيك توك','LinkedIn':'لينكدإن','Company page':'صفحة الشركة','Email':'البريد الإلكتروني','Linktree':'Linktree','All important links':'كل الروابط المهمة','WhatsApp Channel':'قناة واتساب','Follow announcements':'تابع الإعلانات','Connect':'تواصل','Admin preview':'معاينة الإدارة','All rights reserved.':'جميع الحقوق محفوظة.','LET\'S GET STARTED':'لنبدأ','Build your':'أنشئ','order.':'طلبك.','Choose the service and options. If a price hasn\'t been approved yet, we\'ll show “Request a quote” rather than invent a price.':'اختر الخدمة والخيارات المناسبة. إذا لم يُعتمد السعر بعد، سيظهر «اطلب عرض سعر» بدلًا من وضع سعر غير مؤكد.','Service':'الخدمة','Preferred expert':'الخبير المفضل','No preference':'بدون تفضيل','Market':'السوق','Language':'اللغة','Other languages':'لغات أخرى','Other / discuss':'أخرى / للمناقشة','Package / option':'الباقة / الخيار','Number of job platforms':'عدد منصات التوظيف','1 platform':'منصة واحدة','2 platforms':'منصتان','3 platforms':'3 منصات','4 platforms':'4 منصات','5 platforms':'5 منصات','6 platforms':'6 منصات','Estimated price':'السعر التقديري','Request a quote':'اطلب عرض سعر','Your name':'اسمك','Email or WhatsApp':'البريد الإلكتروني أو واتساب','Additional details':'تفاصيل إضافية','Preferred payment method':'طريقة الدفع المفضلة','Bank transfer':'تحويل بنكي','Mobile wallet':'محفظة إلكترونية','InstaPay (Egypt only)':'إنستاباي (مصر فقط)','Screenshot of payment':'صورة إثبات الدفع','Remove image':'إزالة الصورة','Payment instructions':'تعليمات الدفع','Account / wallet details':'بيانات الحساب / المحفظة','Account holder':'اسم صاحب الحساب','Reference / note':'مرجع / ملاحظة','Submit order request ↗':'إرسال طلب الخدمة ↗','SITE MANAGEMENT · DEMO':'إدارة الموقع · تجريبي','Admin':'الإدارة','Prices':'الأسعار','CV bundles':'باقات السيرة الذاتية','Order requests':'طلبات الخدمة','Export configuration':'تصدير الإعدادات','Import config':'استيراد الإعدادات','Reset demo data':'إعادة ضبط البيانات التجريبية'
+          };
+          const payload = JSON.stringify(dict).replace(/</g, '\\u003c');
+          const script = `
+          <style id="cvm-locale-preview-style">
+          #cvm-locale-toggle{position:fixed;z-index:2147483647;top:16px;left:16px;border:1px solid #ef4444;background:#111;color:#fff;padding:10px 16px;border-radius:999px;font:600 14px Arial,sans-serif;box-shadow:0 6px 22px #0003;cursor:pointer}
+          html[dir="rtl"] body{direction:rtl}
+          html[dir="rtl"] header,html[dir="rtl"] nav,html[dir="rtl"] [class*="grid"],html[dir="rtl"] [class*="flex"],html[dir="rtl"] [class*="row"],html[dir="rtl"] footer{direction:ltr}
+          html[dir="rtl"] p,html[dir="rtl"] h1,html[dir="rtl"] h2,html[dir="rtl"] h3,html[dir="rtl"] h4,html[dir="rtl"] li,html[dir="rtl"] label,html[dir="rtl"] input,html[dir="rtl"] textarea,html[dir="rtl"] select,html[dir="rtl"] option{direction:rtl;text-align:right}
+          </style>
+          <button id="cvm-locale-toggle" type="button" aria-label="Switch website language">العربية</button>
+          <script>
+          (function(){
+            const translations = ${payload};
+            const key='cvm_site_language';
+            const saved=localStorage.getItem(key);
+            let lang=saved || ((navigator.language||'en').toLowerCase().startsWith('ar')?'ar':'en');
+            const originals=new WeakMap();
+            const skip='SCRIPT,STYLE,NOSCRIPT,TEXTAREA';
+            function translate(){
+              document.documentElement.lang=lang;
+              document.documentElement.dir=lang==='ar'?'rtl':'ltr';
+              const btn=document.getElementById('cvm-locale-toggle');
+              if(btn){btn.textContent=lang==='ar'?'English':'العربية';btn.setAttribute('aria-label',lang==='ar'?'Switch to English':'التبديل إلى العربية');}
+              const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode(n){
+                if(!n.nodeValue.trim()||n.parentElement.closest(skip)||n.parentElement.id==='cvm-locale-toggle') return NodeFilter.FILTER_REJECT;
+                return NodeFilter.FILTER_ACCEPT;
+              }});
+              let n;
+              while(n=walker.nextNode()){
+                if(!originals.has(n)) originals.set(n,n.nodeValue);
+                const original=originals.get(n), trimmed=original.trim();
+                if(lang==='ar' && translations[trimmed]) n.nodeValue=original.replace(trimmed,translations[trimmed]);
+                else n.nodeValue=original;
+              }
+              document.querySelectorAll('input[placeholder],textarea[placeholder],input[aria-label],button[aria-label]').forEach(el=>{
+                for(const attr of ['placeholder','aria-label']){
+                  if(!el.hasAttribute(attr)) continue;
+                  const originalKey='data-cvm-original-'+attr;
+                  if(!el.hasAttribute(originalKey)) el.setAttribute(originalKey,el.getAttribute(attr));
+                  const original=el.getAttribute(originalKey);
+                  el.setAttribute(attr,lang==='ar'?(translations[original]||original):original);
+                }
+              });
+            }
+            document.getElementById('cvm-locale-toggle').addEventListener('click',()=>{lang=lang==='ar'?'en':'ar';localStorage.setItem(key,lang);translate();});
+            translate();
+            new MutationObserver(()=>{if(!window.__cvmLocaleBusy){window.__cvmLocaleBusy=true;requestAnimationFrame(()=>{translate();window.__cvmLocaleBusy=false;});}}).observe(document.body,{childList:true,subtree:true});
+          })();
+          <\/script>`;
+          const insertAt = html.toLowerCase().lastIndexOf('</body>');
+          if (insertAt < 0) throw new Error('Could not find closing body tag; refusing to alter source.');
+          html = html.slice(0, insertAt) + script + html.slice(insertAt);
+          fs.writeFileSync('bilingual-preview.html', html);
+          console.log('Preview generated; original production file untouched.');
+          console.log('Translation entries: ' + Object.keys(dict).length);
+          console.log('Preview bytes: ' + Buffer.byteLength(html));
+          NODE
+      - name: Commit isolated preview
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bilingual-preview.html
+          git commit -m "Build isolated bilingual website preview" || echo "No preview changes"
+          git push origin bilingual-localization-preview
