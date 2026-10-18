@@ -614,4 +614,95 @@ renderAll();
  });});
 })();
 </script>
+<script id="cvm-auto-language-switch">
+/* CVM_AUTO_LANGUAGE_SWITCH_V1 */
+(() => {
+  const KEY = 'cvm_site_language';
+  const supported = ['ar', 'en'];
+  let saved = '';
+  try { saved = localStorage.getItem(KEY) || ''; } catch (_) {}
+  const deviceLang = String(navigator.language || (navigator.languages && navigator.languages[0]) || 'en').toLowerCase();
+  let lang = supported.includes(saved) ? saved : (deviceLang.startsWith('ar') ? 'ar' : 'en');
+  const dictionary = {
+    'Home':'الرئيسية','Services':'الخدمات','Our Services':'خدماتنا','Packages':'الباقات','About Us':'من نحن','About':'من نحن','Contact Us':'تواصل معنا','Contact':'تواصل معنا',
+    'Get Started':'ابدأ الآن','Order Now':'اطلب الآن','Submit Order':'إرسال الطلب','Place Order':'تأكيد الطلب','Send Order':'إرسال الطلب','Choose Service':'اختر الخدمة','Select Service':'اختر الخدمة',
+    'Professional CV Writing':'كتابة سيرة ذاتية احترافية','CV Writing':'كتابة السيرة الذاتية','ATS CV':'سيرة ذاتية متوافقة مع ATS','ATS Resume':'سيرة ذاتية متوافقة مع ATS',
+    'Cover Letter':'خطاب تقديم','LinkedIn Profile':'الملف الشخصي على LinkedIn','Portfolio':'معرض الأعمال','Translation':'الترجمة','Job Account Setup':'إنشاء حسابات التوظيف',
+    'Name':'الاسم','Full Name':'الاسم بالكامل','Your Name':'اسمك','Email':'البريد الإلكتروني','Phone':'رقم الهاتف','Phone Number':'رقم الهاتف','Contact Information':'بيانات التواصل',
+    'Country':'الدولة','Select Country':'اختر الدولة','Language':'اللغة','Select Language':'اختر اللغة','Service':'الخدمة','Select a service':'اختر الخدمة','Package':'الباقة','Select Package':'اختر الباقة',
+    'Notes':'ملاحظات','Additional Notes':'ملاحظات إضافية','Your message':'رسالتك','Payment Method':'طريقة الدفع','Preferred Expert':'الخبير المفضل',
+    'Egypt':'مصر','Saudi Arabia':'المملكة العربية السعودية','United Arab Emirates':'الإمارات العربية المتحدة','UAE':'الإمارات','Oman':'عُمان',
+    'EGP':'جنيه مصري','SAR':'ريال سعودي','AED':'درهم إماراتي','OMR':'ريال عُماني',
+    'Order submitted successfully':'تم إرسال طلبك بنجاح','Order received successfully':'تم استلام طلبك بنجاح','Submitting order…':'جارٍ إرسال الطلب…','Submit order':'إرسال الطلب',
+    'No preference':'بدون تفضيل','Confirm with team':'التأكيد مع فريق العمل','Select option':'اختر الخيار','Select an option':'اختر الخيار',
+    'Starter':'الباقة الأساسية','Growth':'باقة النمو','Premium':'الباقة المميزة',
+    'Why Choose Us':'لماذا تختارنا؟','Learn More':'اعرف المزيد','View Services':'عرض الخدمات','View Packages':'عرض الباقات',
+    'Frequently Asked Questions':'الأسئلة الشائعة','FAQ':'الأسئلة الشائعة','Testimonials':'آراء العملاء','Our Team':'فريقنا',
+    'Years of Experience':'سنوات من الخبرة','Clients Served':'عميل خدمنا','Success Stories':'قصص النجاح',
+    'Your order has been received by CV Masterpiece. Our team will confirm the details and payment instructions.':'تم استلام طلبك لدى CV Masterpiece. سيؤكد فريقنا التفاصيل وتعليمات الدفع.',
+    'No payment has been taken on this website.':'لم يتم تحصيل أي مبلغ عبر هذا الموقع.'
+  };
+  const reverse = Object.fromEntries(Object.entries(dictionary).map(([en, ar]) => [ar, en]));
+  const originalText = new WeakMap();
+  const translateText = (text, target) => {
+    const raw = text;
+    const trimmed = raw.trim();
+    if (!trimmed) return raw;
+    const map = target === 'ar' ? dictionary : reverse;
+    if (map[trimmed]) return raw.replace(trimmed, map[trimmed]);
+    return raw;
+  };
+  const apply = () => {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    document.body.classList.toggle('cvm-arabic', lang === 'ar');
+    document.querySelectorAll('[data-cvm-original]').forEach(el => {
+      const original = el.getAttribute('data-cvm-original');
+      if (el.matches('input,textarea')) {
+        const key = el.getAttribute('data-cvm-placeholder-original');
+        if (key) el.placeholder = translateText(key, lang);
+      } else if (el.children.length === 0) {
+        el.textContent = translateText(original, lang);
+      }
+    });
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      if (!node.parentElement || node.parentElement.closest('#cvm-language-toggle,script,style,noscript')) continue;
+      if (!node.__cvmOriginal) node.__cvmOriginal = node.nodeValue;
+      node.nodeValue = translateText(node.__cvmOriginal, lang);
+    }
+    document.querySelectorAll('input[placeholder],textarea[placeholder]').forEach(el => {
+      if (!el.dataset.cvmPlaceholderOriginal) el.dataset.cvmPlaceholderOriginal = el.placeholder;
+      el.placeholder = translateText(el.dataset.cvmPlaceholderOriginal, lang);
+    });
+    const btn = document.getElementById('cvm-language-toggle');
+    if (btn) { btn.textContent = lang === 'ar' ? 'English' : 'العربية'; btn.setAttribute('aria-label', lang === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'); }
+  };
+  const addStyles = () => {
+    if (document.getElementById('cvm-language-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'cvm-language-styles';
+    style.textContent = '#cvm-language-toggle{position:fixed;z-index:99999;top:14px;right:14px;border:1px solid #e52b3f;background:#111;color:#fff;border-radius:999px;padding:9px 15px;font:600 14px Arial,sans-serif;cursor:pointer;box-shadow:0 4px 18px #0003}html[dir="rtl"] #cvm-language-toggle{right:auto;left:14px}html[dir="rtl"] body{direction:rtl}html[dir="rtl"] body input,html[dir="rtl"] body textarea,html[dir="rtl"] body select{text-align:right}html[dir="rtl"] body .cvm-keep-ltr{direction:ltr;unicode-bidi:plaintext}@media(max-width:600px){#cvm-language-toggle{top:10px;right:10px;padding:8px 12px}html[dir="rtl"] #cvm-language-toggle{right:auto;left:10px}}';
+    document.head.appendChild(style);
+  };
+  const init = () => {
+    addStyles();
+    let btn = document.getElementById('cvm-language-toggle');
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.id = 'cvm-language-toggle';
+      btn.type = 'button';
+      btn.addEventListener('click', () => {
+        lang = lang === 'ar' ? 'en' : 'ar';
+        try { localStorage.setItem(KEY, lang); } catch (_) {}
+        apply();
+      });
+      document.body.appendChild(btn);
+    }
+    apply();
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+</script>
 </body></html>
