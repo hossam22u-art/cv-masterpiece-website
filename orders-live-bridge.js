@@ -1,24 +1,32 @@
 /* CV Masterpiece live orders bridge.
    Uses only the public Supabase publishable/anon key. Never use a secret/service_role key here.
-   This helper is loaded by the main site and can be called by its existing order form handler.
+   The main website must load this script and call submitCvmLiveOrder(...) from its order form.
 */
 (function () {
-  const projectUrl = 'PASTE_SUPABASE_PROJECT_URL';
-  const publishableKey = 'PASTE_SUPABASE_PUBLISHABLE_KEY';
+  const config = () => ({
+    projectUrl: localStorage.getItem('cvm_supabase_url') || '',
+    publishableKey: localStorage.getItem('cvm_supabase_key') || ''
+  });
 
-  if (!window.supabase || projectUrl.includes('PASTE_') || publishableKey.includes('PASTE_')) {
-    console.warn('CV Masterpiece order integration needs Supabase URL and public key configuration.');
-    window.cvmOrdersClient = null;
-    return;
+  function connect() {
+    const { projectUrl, publishableKey } = config();
+    if (!window.supabase || !projectUrl.startsWith('https://') || !publishableKey) {
+      window.cvmOrdersClient = null;
+      return false;
+    }
+    window.cvmOrdersClient = window.supabase.createClient(projectUrl, publishableKey);
+    return true;
   }
 
-  window.cvmOrdersClient = window.supabase.createClient(projectUrl, publishableKey);
+  connect();
 
   window.submitCvmLiveOrder = async function (order) {
-    if (!window.cvmOrdersClient) throw new Error('Order database is not configured.');
+    if (!connect() || !window.cvmOrdersClient) {
+      throw new Error('Orders database is not configured. Open the admin page, connect Supabase, then reload the website.');
+    }
     const payload = {
       customer_name: String(order.customer_name || '').trim(),
-      email: order.email || null,
+      email: String(order.email || '').trim() || null,
       phone: String(order.phone || '').trim(),
       country: String(order.country || '').trim() || null,
       currency: String(order.currency || 'EGP').trim(),
@@ -29,7 +37,7 @@
     };
     if (payload.customer_name.length < 2 || payload.phone.length < 5 ||
         payload.service_name.length < 2 || !Number.isFinite(payload.price) || payload.price < 0) {
-      throw new Error('Please provide a valid name, contact, service and price.');
+      throw new Error('Please provide a valid name, phone, service and price.');
     }
     const { data, error } = await window.cvmOrdersClient
       .from('orders')
