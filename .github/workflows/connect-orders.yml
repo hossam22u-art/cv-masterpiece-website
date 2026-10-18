@@ -1,0 +1,90 @@
+name: Connect live Supabase orders
+on:
+  push:
+    paths:
+      - '.github/workflows/connect-orders.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch-order-form:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Connect order form to Supabase
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'index.html.html';
+          let html = fs.readFileSync(path, 'utf8');
+          const startMarker = "document.getElementById('orderForm').addEventListener('submit',e=>";
+          const endMarker = '// Admin preview';
+          const start = html.indexOf(startMarker);
+          const end = html.indexOf(endMarker, start);
+          if (start < 0 || end < 0) throw new Error('Could not locate the existing order form handler; no changes made.');
+          if (html.includes('LIVE_SUPABASE_ORDER_HANDLER_V1')) {
+            console.log('Live order handler already installed.');
+            process.exit(0);
+          }
+          const replacement = String.raw`/* LIVE_SUPABASE_ORDER_HANDLER_V1 */
+          (function(){
+            const form=document.getElementById('orderForm');
+            if(!form)return;
+            window.submitCvmLiveOrder=async function(order){
+              const projectUrl=localStorage.getItem('cvm_supabase_url')||'';
+              const publicKey=localStorage.getItem('cvm_supabase_key')||'';
+              if(!projectUrl.startsWith('https://')||!publicKey)throw new Error('Orders database is not configured. Open the admin page, connect Supabase, then reload this page.');
+              if(!window.supabase?.createClient){
+                await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';script.onload=resolve;script.onerror=()=>reject(new Error('Could not load Supabase library. Check your internet connection.'));document.head.appendChild(script)});
+              }
+              if(!window.supabase?.createClient)throw new Error('Supabase library did not load.');
+              const client=window.supabase.createClient(projectUrl,publicKey);
+              const contact=String(order.contact||'').trim();
+              const notes=[order.notes||'','Language: '+(order.language||'Not specified'),'Selected option: '+(order.option||'Not specified'),'Payment preference: '+String(order.paymentMethod||'confirm-with-team').replaceAll('-',' '),'Preferred expert: '+(document.getElementById('preferredExpert')?.value||'No preference'),order.bundleId?'Bundle ID: '+order.bundleId:''].filter(Boolean).join('\\n');
+              const payload={customer_name:String(order.name||'').trim(),email:contact.includes('@')?contact:null,phone:contact,country:({EG:'Egypt',SA:'Saudi Arabia',AE:'UAE'})[order.country]||order.country||null,currency:String(order.currency||'EGP'),service_name:String(order.serviceName||order.serviceId||'').trim(),package_name:order.bundleId?String(order.serviceName):String(order.option||'').trim()||null,price:Number.isFinite(Number(order.price))&&Number(order.price)>=0?Number(order.price):0,notes:notes||null};
+              if(payload.customer_name.length<2||payload.phone.length<5||payload.service_name.length<2)throw new Error('Please enter a valid name, contact method and service.');
+              const {data,error}=await client.from('orders').insert(payload).select('id,order_number,created_at').single();
+              if(error)throw error;
+              return data;
+            };
+          })();
+          const orderForm=document.getElementById('orderForm');
+          orderForm.addEventListener('submit',async e=>{
+            e.preventDefault();
+            const submitButton=orderForm.querySelector('button[type="submit"],button:not([type])');
+            const originalText=submitButton?.textContent;
+            if(submitButton){submitButton.disabled=true;submitButton.textContent='Submitting order…'}
+            const id=document.getElementById('orderService').value,service=db.services.find(s=>s.id===id),country=document.getElementById('orderCountry').value,language=document.getElementById('orderLanguage').value,option=document.getElementById('orderOption').value,selectedBundle=db.bundles.find(b=>b.id===selectedBundleId),isSocial=['social-starter','social-growth','social-premium'].includes(id),price=selectedBundle?Number(selectedBundle.price):(isSocial&&country==='EG'?200:getPrice(id,country,language,option));
+            const paymentMethod=document.getElementById('paymentMethod')?.value||'confirm-with-team';
+            const order={id:'REQ-'+Date.now().toString().slice(-7),createdAt:new Date().toISOString(),serviceId:id,serviceName:selectedBundle?selectedBundle.name:(service?.name||id),bundleId:selectedBundle?.id||null,country,language,option,price,currency:selectedBundle?selectedBundle.currency:MARKET[country].currency,name:document.getElementById('customerName').value.trim(),contact:document.getElementById('customerContact').value.trim(),notes:document.getElementById('customerNotes').value.trim(),paymentMethod,status:'Pending manual payment instructions'};
+            try{
+              const saved=await window.submitCvmLiveOrder(order);
+              order.id=saved.order_number||order.id;
+              db.orders.unshift(order);saveDB();
+              orderForm.hidden=true;
+              const success=document.getElementById('orderSuccess');success.hidden=false;
+              success.innerHTML='<strong>Order submitted successfully: '+escapeHtml(order.id)+'</strong><br>Your order has been received by CV Masterpiece. Our team will confirm the details and payment instructions. <strong>No payment has been taken on this website.</strong>';
+              toast('Order received successfully');
+            }catch(error){
+              const success=document.getElementById('orderSuccess');success.hidden=false;
+              success.innerHTML='<strong>Order was not submitted.</strong><br>'+escapeHtml(error?.message||'An unexpected error occurred.')+'<br>Please try again or contact CV Masterpiece. No order was recorded as successful.';
+              toast('Could not submit order');
+            }finally{if(submitButton){submitButton.disabled=false;submitButton.textContent=originalText||'Submit order'}}
+          });
+          `;
+          html = html.slice(0, start) + replacement + html.slice(end);
+          fs.writeFileSync(path, html);
+          console.log('Patched order form in '+path+' ('+html.length+' characters).');
+          NODE
+      - name: Commit patched site
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html.html
+          git commit -m "Connect order form to Supabase live orders" || exit 0
+          git push
