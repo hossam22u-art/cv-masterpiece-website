@@ -18,7 +18,11 @@ jobs:
           const file = 'index.html.html';
           let html = fs.readFileSync(file, 'utf8');
           const before = html;
-          html = html.replace(/<script id="cvm-auto-language-switch">[\\s\\S]*?<\\/script>\\s*/i, '');
+          const start = html.indexOf('<script id="cvm-auto-language-switch">');
+          if (start >= 0) {
+            const endTag = html.indexOf('</script>', start);
+            if (endTag >= 0) html = html.slice(0, start) + html.slice(endTag + '</script>'.length).replace(/^\\s+/, '');
+          }
           if (html === before) {
             console.log('No injected language script found; nothing to remove.');
           } else {
