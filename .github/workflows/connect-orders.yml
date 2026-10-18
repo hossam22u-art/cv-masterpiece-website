@@ -30,6 +30,7 @@ jobs:
           if (start < 0 || end < 0) {
             console.log('Diagnostic: order form handler start=' + start + ', admin preview marker=' + end + ', file length=' + html.length);
             console.log('Nearby orderForm occurrences: ' + [...html.matchAll(/orderForm/g)].slice(-8).map(m => m.index).join(', '));
+            console.log('Handler context: ' + html.slice(Math.max(0, start - 300), Math.max(0, start - 300) + 5000));
             throw new Error('Could not locate order form handler or admin preview marker; no changes made.');
           }
           if (html.includes('LIVE_SUPABASE_ORDER_HANDLER_V1')) {
