@@ -47,7 +47,7 @@ jobs:
           console.log('VISIBLE_ENGLISH_TEXTS=' + unique.length);
           console.log('ATTRIBUTE_ENGLISH_TEXTS=' + attrs.length);
           console.log('---TEXT SAMPLE---');
-          console.log(unique.slice(0,240).join(' | '));
+          for (let i=0; i<unique.length; i+=80) console.log('TEXT_CHUNK_' + i + '=' + unique.slice(i,i+80).join(' | '));
           console.log('---ATTRIBUTES---');
           console.log([...new Set(attrs)].slice(0,100).join(' | '));
           NODE
