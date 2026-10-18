@@ -14,7 +14,7 @@
 <section id="loginPanel" class="panel narrow hidden"><h2>Admin sign in</h2><p class="muted">Use the admin account created in Supabase Authentication.</p><form id="loginForm"><label>Email</label><input id="email" type="email" required autocomplete="username"><label>Password</label><input id="password" type="password" required autocomplete="current-password"><button style="width:100%;margin-top:16px">Sign in</button></form><p id="loginError" class="error"></p></section>
 <section id="dashboard" class="hidden">
 <div class="toolbar"><div><h2 style="margin:0">Orders</h2><p class="muted" style="margin:4px 0">Orders submitted by customers appear here once the website form is connected.</p></div><button id="refresh" class="secondary">Refresh orders</button></div>
-<div class="notice">Setup required: this dashboard will only show real orders after the Supabase table is created and the website order form is connected to it.</div>
+<div class="notice hidden" id="setupNotice"></div>
 <div class="grid"><div class="stat"><span>Total orders</span><strong id="total">0</strong></div><div class="stat"><span>New</span><strong id="newCount">0</strong></div><div class="stat"><span>In progress</span><strong id="progressCount">0</strong></div><div class="stat"><span>Completed</span><strong id="doneCount">0</strong></div></div>
 <div class="panel"><div class="toolbar"><input id="search" placeholder="Search name, phone, order ID…"><select id="filter" style="max-width:190px"><option value="">All statuses</option><option>New</option><option>In progress</option><option>Completed</option><option>Cancelled</option></select></div><div id="message" class="muted" style="margin-top:10px"></div><div class="tablewrap"><table><thead><tr><th>Order</th><th>Customer</th><th>Service</th><th>Country / price</th><th>Created</th><th>Status</th></tr></thead><tbody id="orders"><tr><td colspan="6" class="empty">Sign in and refresh to load orders.</td></tr></tbody></table></div></div>
 </section></main>
@@ -23,7 +23,7 @@
 const $=id=>document.getElementById(id);let cvmSupabaseClient=null,allOrders=[];
 function setError(id,msg){$(id).textContent=msg||''}
 function show(which){['setup','loginPanel','dashboard'].forEach(id=>$(id).classList.toggle('hidden',id!==which));$('logout').classList.toggle('hidden',which!=='dashboard')}
-function config(){return {url:localStorage.getItem('cvm_supabase_url')||'',key:localStorage.getItem('cvm_supabase_key')||''}}
+function config(){return {url:'https://boyaotdatuquzuqolglk.supabase.co',key:'sb_publishable_ov9S-hCo_QqowNsMZaMESg_OIPL3K_y'}}
 function connect(){const c=config();if(!c.url||!c.key){show('setup');return}cvmSupabaseClient=window.supabase.createClient(c.url,c.key);show('loginPanel');cvmSupabaseClient.auth.getSession().then(({data})=>{if(data.session){show('dashboard');loadOrders()}})}
 $('saveConfig').onclick=()=>{const url=$('url').value.trim(),key=$('key').value.trim();if(!url.startsWith('https://')||!key){setError('setupError','Enter a valid project URL and public anon/publishable key.');return}localStorage.setItem('cvm_supabase_url',url);localStorage.setItem('cvm_supabase_key',key);connect()};
 $('loginForm').onsubmit=async e=>{e.preventDefault();setError('loginError','Signing in…');const {error}=await cvmSupabaseClient.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error){setError('loginError',error.message);return}setError('loginError','');show('dashboard');await loadOrders()};
