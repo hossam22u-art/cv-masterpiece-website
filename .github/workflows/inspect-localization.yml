@@ -16,19 +16,34 @@ jobs:
           node <<'NODE'
           const fs = require('fs');
           const h = fs.readFileSync('index.html.html','utf8');
-          const strip = s => s.replace(/<script\\b[^>]*>[\\s\\S]*?<\\/script>/gi,' ').replace(/<style\\b[^>]*>[\\s\\S]*?<\\/style>/gi,' ').replace(/<!--[\\s\\S]*?-->/g,' ');
-          const visible = strip(h);
-          const texts = [...visible.matchAll(/>([^<>]{2,180})</g)].map(m=>m[1].replace(/\\s+/g,' ').trim()).filter(s=>s && /[A-Za-z]/.test(s));
+          function removeBlocks(s, tag) {
+            const open = '<' + tag;
+            const close = '</' + tag + '>';
+            let out = '', pos = 0;
+            while (pos < s.length) {
+              const a = s.toLowerCase().indexOf(open, pos);
+              if (a < 0) { out += s.slice(pos); break; }
+              out += s.slice(pos, a);
+              const b = s.toLowerCase().indexOf(close, a);
+              if (b < 0) break;
+              out += ' ';
+              pos = b + close.length;
+            }
+            return out;
+          }
+          let visible = removeBlocks(removeBlocks(h, 'script'), 'style');
+          visible = visible.replace(new RegExp('<!--[\\\\s\\\\S]*?-->','g'), ' ');
+          const texts = [...visible.matchAll(new RegExp('>([^<>]{2,180})<','g'))].map(m=>m[1].replace(new RegExp('\\\\s+','g'),' ').trim()).filter(s=>s && /[A-Za-z]/.test(s));
           const unique = [...new Set(texts)];
-          const attrs = [...h.matchAll(/(?:placeholder|aria-label|title|alt)\\s*=\\s*["']([^"']{2,100})["']/gi)].map(m=>m[1].trim()).filter(s=>/[A-Za-z]/.test(s));
+          const attrs = [...h.matchAll(new RegExp('(placeholder|aria-label|title|alt)\\\\s*=\\\\s*["\\\\x27]([^"\\\\x27]{2,100})["\\\\x27]','gi'))].map(m=>m[2].trim()).filter(s=>/[A-Za-z]/.test(s));
           console.log('HTML_BYTES=' + Buffer.byteLength(h));
-          console.log('LANG=' + (h.match(/<html[^>]*>/i)||['not found'])[0]);
-          console.log('BODY_OPEN=' + (h.match(/<body[^>]*>/i)||['not found'])[0]);
-          console.log('FORM_COUNT=' + (h.match(/<form\\b/gi)||[]).length);
-          console.log('BUTTON_COUNT=' + (h.match(/<button\\b/gi)||[]).length);
-          console.log('INPUT_COUNT=' + (h.match(/<input\\b/gi)||[]).length);
-          console.log('SELECT_COUNT=' + (h.match(/<select\\b/gi)||[]).length);
-          console.log('SCRIPT_COUNT=' + (h.match(/<script\\b/gi)||[]).length);
+          console.log('LANG=' + (h.match(new RegExp('<html[^>]*>','i'))||['not found'])[0]);
+          console.log('BODY_OPEN=' + (h.match(new RegExp('<body[^>]*>','i'))||['not found'])[0]);
+          console.log('FORM_COUNT=' + (h.match(new RegExp('<form\\\\b','gi'))||[]).length);
+          console.log('BUTTON_COUNT=' + (h.match(new RegExp('<button\\\\b','gi'))||[]).length);
+          console.log('INPUT_COUNT=' + (h.match(new RegExp('<input\\\\b','gi'))||[]).length);
+          console.log('SELECT_COUNT=' + (h.match(new RegExp('<select\\\\b','gi'))||[]).length);
+          console.log('SCRIPT_COUNT=' + (h.match(new RegExp('<script\\\\b','gi'))||[]).length);
           console.log('VISIBLE_ENGLISH_TEXTS=' + unique.length);
           console.log('ATTRIBUTE_ENGLISH_TEXTS=' + attrs.length);
           console.log('---TEXT SAMPLE---');
