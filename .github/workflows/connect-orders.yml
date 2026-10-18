@@ -22,7 +22,7 @@ jobs:
           const fs = require('fs');
           const path = 'index.html.html';
           let html = fs.readFileSync(path, 'utf8');
-          const startPattern = /document\\.getElementById\\(\\s*(['"])orderForm\\1\\s*\\)\\.addEventListener\\(\\s*(['"])submit\\2\\s*,/;
+          const startPattern = /document\.getElementById\(\s*(['"])orderForm\1\s*\)\.addEventListener\(\s*(['"])submit\2\s*,/;
           const match = startPattern.exec(html);
           const endMarker = '// Admin preview';
           const start = match ? match.index : -1;
