@@ -25,15 +25,17 @@ jobs:
           if (!html.includes('LIVE_SUPABASE_ORDER_HANDLER_V1')) {
             throw new Error('Live order handler marker not found; refusing to modify unrelated site code.');
           }
-          const urlPattern = /const projectUrl=localStorage\.getItem\('cvm_supabase_url'\)\|\|'';/;
-          const keyPattern = /const publicKey=localStorage\.getItem\('cvm_supabase_key'\)\|\|'';/;
-          if (!urlPattern.test(html) || !keyPattern.test(html)) {
-            throw new Error('Could not find the existing Supabase configuration lines.');
+          const oldCall = "const {data,error}=await client.from('orders').insert(payload).select('id,order_number,created_at').single();";
+          const newCall = "const {error}=await client.from('orders').insert(payload);";
+          if (!html.includes(oldCall)) {
+            throw new Error('Could not find the exact insert-returning query to patch safely.');
           }
-          html = html.replace(urlPattern, "const projectUrl='https://boyaotdatuquzuqolglk.supabase.co';");
-          html = html.replace(keyPattern, "const publicKey='sb_publishable_ov9S-hCo_QqowNsMZaMESg_OIPL3K_y';");
+          html = html.replace(oldCall, newCall).replace(
+            "              if(error)throw error;\n              return data;",
+            "              if(error)throw error;\n              return {order_number:order.id};"
+          );
           fs.writeFileSync(path, html);
-          console.log('Configured public Supabase project URL and publishable key in the website.');
+          console.log('Patched order insert to avoid SELECT permission requirements.');
           process.exit(0);
           const replacement = String.raw`/* LIVE_SUPABASE_ORDER_HANDLER_V1 */
           (function(){
