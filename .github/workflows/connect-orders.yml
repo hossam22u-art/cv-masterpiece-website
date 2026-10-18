@@ -22,11 +22,16 @@ jobs:
           const fs = require('fs');
           const path = 'index.html.html';
           let html = fs.readFileSync(path, 'utf8');
-          const startMarker = "document.getElementById('orderForm').addEventListener('submit',e=>";
+          const startPattern = /document\\.getElementById\\(\\s*(['"])orderForm\\1\\s*\\)\\.addEventListener\\(\\s*(['"])submit\\2\\s*,/;
+          const match = startPattern.exec(html);
           const endMarker = '// Admin preview';
-          const start = html.indexOf(startMarker);
+          const start = match ? match.index : -1;
           const end = html.indexOf(endMarker, start);
-          if (start < 0 || end < 0) throw new Error('Could not locate the existing order form handler; no changes made.');
+          if (start < 0 || end < 0) {
+            console.log('Diagnostic: order form handler start=' + start + ', admin preview marker=' + end + ', file length=' + html.length);
+            console.log('Nearby orderForm occurrences: ' + [...html.matchAll(/orderForm/g)].slice(-8).map(m => m.index).join(', '));
+            throw new Error('Could not locate order form handler or admin preview marker; no changes made.');
+          }
           if (html.includes('LIVE_SUPABASE_ORDER_HANDLER_V1')) {
             console.log('Live order handler already installed.');
             process.exit(0);
