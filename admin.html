@@ -33,14 +33,22 @@ async function loadOrders(){ $('message').textContent='Loading…';const {data,e
 function renderOrders(){const q=$('search').value.toLowerCase(),f=$('filter').value;const rows=allOrders.filter(o=>(!f||o.status===f)&&(!q||[o.order_number,o.customer_name,o.phone,o.email,o.service_name,o.package_name].some(v=>String(v||'').toLowerCase().includes(q))));$('total').textContent=allOrders.length;$('newCount').textContent=allOrders.filter(o=>o.status==='New').length;$('progressCount').textContent=allOrders.filter(o=>o.status==='In progress').length;$('doneCount').textContent=allOrders.filter(o=>o.status==='Completed').length;$('message').textContent=rows.length+' order(s)';const body=$('orders');body.replaceChildren();if(!rows.length){body.innerHTML='<tr><td colspan="6" class="empty">No orders found.</td></tr>';return}for(const o of rows){const tr=document.createElement('tr');const add=(text,sub='')=>{const td=document.createElement('td');td.textContent=text||'—';if(sub){const small=document.createElement('div');small.className='muted';small.textContent=sub;td.appendChild(small)}tr.appendChild(td)};add(o.order_number||o.id?.slice(0,8),new Date(o.created_at).toLocaleString());add(o.customer_name,o.phone||o.email);add(o.service_name,o.package_name);add((o.country||'')+' · '+(o.price==null?'':Number(o.price).toLocaleString()+' '+(o.currency||'')));
 /* Show an already-uploaded payment proof when its URL/path is stored on the order. */
 const proofTd=document.createElement('td');
-const proofKeys=['payment_screenshot_url','payment_proof_url','payment_screenshot','payment_proof','proof_url','screenshot_url','receipt_url','payment_image_url','payment_receipt','proof_path','payment_proof_path'];
+const proofKeys=['payment_screenshot_url','payment_proof_url','payment_screenshot','payment_proof','proof_url','screenshot_url','receipt_url','payment_image_url','payment_receipt','proof_path','payment_proof_path','payment_screenshot_path'];
 const proofKey=proofKeys.find(k=>typeof o[k]==='string'&&o[k].trim());
 if(proofKey){
  const proofValue=o[proofKey].trim();
- if(/^https?:\/\//i.test(proofValue)||/^data:image\//i.test(proofValue)){
-  const link=document.createElement('a');link.href=proofValue;link.target='_blank';link.rel='noopener noreferrer';link.textContent='View payment proof';link.style.color='#ff6878';
-  const img=document.createElement('img');img.src=proofValue;img.alt='Payment proof';img.loading='lazy';img.style.cssText='display:block;max-width:120px;max-height:90px;object-fit:contain;margin-top:6px;border-radius:6px;border:1px solid #444';
-  link.appendChild(img);proofTd.appendChild(link);
+ const showProof=url=>{
+  const link=document.createElement('a');link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='View payment proof';link.style.color='#ff6878';
+  const img=document.createElement('img');img.src=url;img.alt='Payment proof';img.loading='lazy';img.style.cssText='display:block;max-width:120px;max-height:90px;object-fit:contain;margin-top:6px;border-radius:6px;border:1px solid #444';
+  link.appendChild(img);proofTd.replaceChildren(link);
+ };
+ if(/^https?:\/\//i.test(proofValue)||/^data:image\//i.test(proofValue)){showProof(proofValue);}
+ else if(proofValue.startsWith('payment-proofs/')){
+  proofTd.textContent='Loading payment proof…';
+  cvmSupabaseClient.storage.from('payment-proofs').createSignedUrl(proofValue.slice('payment-proofs/'.length),300).then(({data,error})=>{
+   if(error||!data?.signedUrl){proofTd.textContent='Could not load proof';proofTd.title=error?.message||'Signed URL unavailable';return;}
+   showProof(data.signedUrl);
+  });
  }else{proofTd.textContent='File saved (private path)';const small=document.createElement('div');small.className='muted';small.textContent=proofValue;proofTd.appendChild(small);}
 }else{proofTd.textContent='No proof field found';proofTd.className='muted';}
 tr.appendChild(proofTd);
