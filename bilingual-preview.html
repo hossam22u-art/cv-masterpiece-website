@@ -616,6 +616,46 @@ renderAll();
 </script>
 
 
+<script id="cvm-payment-proof-required">
+(function(){
+  function attachProofValidation(){
+    document.querySelectorAll('form').forEach(form=>{
+      if(form.dataset.cvmProofGuard==='1') return;
+      const fileInputs=[...form.querySelectorAll('input[type="file"]')];
+      const context=(form.innerText+' '+form.id+' '+form.className).toLowerCase();
+      const looksLikeOrder=/order|payment|checkout|request|طلب|دفع|تحويل/.test(context);
+      if(!fileInputs.length || !looksLikeOrder) return;
+      form.dataset.cvmProofGuard='1';
+      fileInputs.forEach(input=>{
+        input.required=true;
+        input.accept=input.accept ? input.accept+',image/*' : 'image/*';
+        input.addEventListener('change',()=>{
+          const f=input.files && input.files[0];
+          if(f && !f.type.startsWith('image/')){input.value='';alert('Please upload a payment screenshot image.');}
+        });
+      });
+      form.addEventListener('submit',e=>{
+        const picked=fileInputs.some(input=>input.files && input.files.length && input.files[0].type.startsWith('image/'));
+        if(!picked){e.preventDefault();e.stopImmediatePropagation();alert('Please upload your payment screenshot before submitting the order.');}
+      },true);
+    });
+    document.querySelectorAll('button,[role="button"]').forEach(btn=>{
+      if(btn.dataset.cvmProofGuard==='1') return;
+      const label=(btn.innerText||btn.getAttribute('aria-label')||'').toLowerCase();
+      if(!/submit order|send order|place order|إرسال الطلب|تأكيد الطلب/.test(label)) return;
+      const form=btn.closest('form');
+      if(!form) return;
+      btn.dataset.cvmProofGuard='1';
+      btn.addEventListener('click',e=>{
+        const files=[...form.querySelectorAll('input[type="file"]')];
+        if(files.length && !files.some(input=>input.files && input.files.length && input.files[0].type.startsWith('image/'))){e.preventDefault();e.stopImmediatePropagation();alert('Please upload your payment screenshot before submitting the order.');}
+      },true);
+    });
+  }
+  attachProofValidation();
+  new MutationObserver(attachProofValidation).observe(document.body,{childList:true,subtree:true});
+})();
+</script>
 <style id="cvm-locale-preview-style">
 #cvm-locale-toggle{position:fixed;z-index:2147483647;bottom:22px;left:22px;top:auto;border:1px solid #ef4444;background:#111;color:#fff;padding:10px 16px;border-radius:999px;font:600 14px Arial,sans-serif;box-shadow:0 6px 22px #0003;cursor:pointer}
 /* Public preview must never expose the local-only admin panel or its launcher. */
