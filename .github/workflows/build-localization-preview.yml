@@ -22,7 +22,7 @@ jobs:
           const fs = require('fs');
           const sourcePath = 'index.html.html';
           let html = fs.readFileSync(sourcePath, 'utf8');
-          for (const term of ['PROFESSIONAL CAREER BRANDING STUDIO','Career services, job search support','hero-media','hero-visual','section id="home"','id="home"']) {
+          for (const term of ['SITE MANAGEMENT · DEMO','SITE MANAGEMENT','admin-panel','adminPanel','adminModal','admin-toggle','data-admin','Admin','demo-admin']) {
             const at = html.indexOf(term);
             console.log('INSPECT_TERM ' + term + ' index=' + at);
             if (at >= 0) console.log(html.slice(Math.max(0, at - 1800), Math.min(html.length, at + 1800)).replace(/\\s+/g,' ').slice(0,3600));
