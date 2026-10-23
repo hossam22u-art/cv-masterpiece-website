@@ -620,6 +620,15 @@ renderAll();
 #cvm-locale-toggle{position:fixed;z-index:2147483647;bottom:22px;left:22px;top:auto;border:1px solid #ef4444;background:#111;color:#fff;padding:10px 16px;border-radius:999px;font:600 14px Arial,sans-serif;box-shadow:0 6px 22px #0003;cursor:pointer}
 /* Preview-only hero/video layout refinement: preserve the media artwork and keep copy in its own column. */
 .hero,.hero-section,.hero-main,[class*="hero-layout"],[class*="hero-grid"]{min-width:0}
+/* Precise layout override for the real hero markup: .hero-copy + .hero-art > .hero-video */
+section.hero#home{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1.02fr)!important;align-items:center!important;gap:clamp(24px,3vw,52px)!important;overflow:hidden!important}
+section.hero#home>.hero-copy{grid-column:1!important;grid-row:1!important;width:100%!important;min-width:0!important;max-width:100%!important;position:relative!important;z-index:1}
+section.hero#home>.hero-art{grid-column:2!important;grid-row:1!important;align-self:center!important;width:100%!important;min-width:0!important;max-width:100%!important;height:auto!important;aspect-ratio:16/9!important;overflow:hidden!important;position:relative!important;border-radius:24px!important}
+section.hero#home>.hero-art>.hero-video{display:block!important;width:100%!important;height:100%!important;max-width:100%!important;max-height:none!important;aspect-ratio:16/9!important;object-fit:contain!important;object-position:center!important;position:relative!important;inset:auto!important}
+section.hero#home .hero-copy h1{max-width:100%!important;font-size:clamp(2.7rem,4.5vw,5rem)!important;line-height:1.08!important;overflow-wrap:normal!important;word-break:normal!important}
+section.hero#home .hero-copy .hero-sub{max-width:42rem!important}
+@media(max-width:900px){section.hero#home{grid-template-columns:minmax(0,1fr)!important;gap:28px!important}section.hero#home>.hero-copy,section.hero#home>.hero-art{grid-column:1!important;grid-row:auto!important}section.hero#home>.hero-art{aspect-ratio:16/9!important;width:100%!important}section.hero#home>.hero-art>.hero-video{max-height:none!important}section.hero#home .hero-copy h1{font-size:clamp(2.6rem,9vw,4.8rem)!important}}
+/* Earlier generic fallback rules remain below. */
 /* Keep hero copy and media in separate, balanced columns. */
 main>section:first-of-type{overflow:hidden}
 main>section:first-of-type>div{min-width:0}
