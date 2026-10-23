@@ -51,6 +51,7 @@ jobs:
             'Manual payment — no online charge is taken here.':'دفع يدوي — لن يتم تحصيل أي مبلغ عبر الإنترنت هنا.','Required after transfer':'مطلوب بعد التحويل',
             'Confirm available method with the team':'أكد طريقة الدفع المتاحة مع الفريق','Prototype mode: requests are saved in this browser only. Connect a secure backend before accepting live customer data.':'الوضع التجريبي: تُحفظ الطلبات في هذا المتصفح فقط. يجب ربط نظام خلفي آمن قبل استقبال بيانات العملاء الفعلية.',
             'Manage demo services and market prices. Changes are stored in this browser only, not on a server.':'إدارة الخدمات التجريبية وأسعار الأسواق. تُحفظ التغييرات في هذا المتصفح فقط وليس على الخادم.'
+          };
           const payload = JSON.stringify(dict).replace(/</g, '\\u003c');
           const script = `
           <style id="cvm-locale-preview-style">
