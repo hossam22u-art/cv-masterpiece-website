@@ -114,6 +114,8 @@ jobs:
               if(btn){btn.textContent=lang==='ar'?'English':'العربية';btn.setAttribute('aria-label',lang==='ar'?'Switch to English':'التبديل إلى العربية');}
               const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode(n){
                 if(!n.nodeValue.trim()||n.parentElement.closest(skip)||n.parentElement.id==='cvm-locale-toggle') return NodeFilter.FILTER_REJECT;
+                /* Keep form controls and their option labels in their source language: pricing logic may use exact option text as a key. */
+                if(n.parentElement.closest('select,option,input,button,[role="combobox"]')) return NodeFilter.FILTER_REJECT;
                 /* Leave prices and price/status messages untouched by the locale layer; the site's pricing logic owns these values. */
                 if(n.parentElement.closest('[class*="price" i],[id*="price" i],[data-price],.currency,.amount,[class*="amount" i],[class*="cost" i],[class*="quote" i]')) return NodeFilter.FILTER_REJECT;
                 if(/(?:EGP|SAR|AED|USD|\\bprice\\b|\\bquote\\b|\\d[\\d,.]*\\s*(?:جنيه|ريال|درهم))/i.test(n.nodeValue)) return NodeFilter.FILTER_REJECT;
