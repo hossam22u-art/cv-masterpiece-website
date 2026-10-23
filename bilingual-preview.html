@@ -618,6 +618,8 @@ renderAll();
 
 <style id="cvm-locale-preview-style">
 #cvm-locale-toggle{position:fixed;z-index:2147483647;bottom:22px;left:22px;top:auto;border:1px solid #ef4444;background:#111;color:#fff;padding:10px 16px;border-radius:999px;font:600 14px Arial,sans-serif;box-shadow:0 6px 22px #0003;cursor:pointer}
+/* Public preview must never expose the local-only admin panel or its launcher. */
+#adminOpen,#adminModal{display:none!important;visibility:hidden!important;pointer-events:none!important}
 /* Preview-only hero/video layout refinement: preserve the media artwork and keep copy in its own column. */
 .hero,.hero-section,.hero-main,[class*="hero-layout"],[class*="hero-grid"]{min-width:0}
 /* Precise layout override for the real hero markup: .hero-copy + .hero-art > .hero-video */
