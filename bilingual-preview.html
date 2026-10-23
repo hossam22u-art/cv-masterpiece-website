@@ -665,12 +665,20 @@ html[dir="rtl"] p,html[dir="rtl"] h1,html[dir="rtl"] h2,html[dir="rtl"] h3,html[
     if(btn){btn.textContent=lang==='ar'?'English':'العربية';btn.setAttribute('aria-label',lang==='ar'?'Switch to English':'التبديل إلى العربية');}
     const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode(n){
       if(!n.nodeValue.trim()||n.parentElement.closest(skip)||n.parentElement.id==='cvm-locale-toggle') return NodeFilter.FILTER_REJECT;
+      /* Never rewrite live prices, currency values, or price controls: these may be recalculated by the site's own scripts. */
+      if(n.parentElement.closest('[class*="price" i],[id*="price" i],[data-price],.currency,.amount,[class*="amount" i]')) return NodeFilter.FILTER_REJECT;
       return NodeFilter.FILTER_ACCEPT;
     }});
     let n;
     while(n=walker.nextNode()){
       if(!originals.has(n)) originals.set(n,n.nodeValue);
-      const original=originals.get(n), trimmed=original.trim();
+      const current=n.nodeValue;
+      const stored=originals.get(n);
+      /* If the site's own UI updated this node since our last pass, adopt the fresh source text. */
+      const reverse=Object.entries(translations).find(([,ar])=>ar===current)?.[0];
+      const original=(lang==='en' && reverse)?reverse:(current!==stored && !Object.values(translations).includes(current)?current:stored);
+      originals.set(n,original);
+      const trimmed=original.trim();
       if(lang==='ar' && translations[trimmed]) { n.nodeValue=original.replace(trimmed,translations[trimmed]); if(n.parentElement && /^(P|H1|H2|H3|H4|LABEL|LI|SPAN|A|BUTTON|OPTION)$/.test(n.parentElement.tagName)){n.parentElement.dir='rtl';n.parentElement.style.textAlign='right';} }
       else { n.nodeValue=original; if(n.parentElement && /^(P|H1|H2|H3|H4|LABEL|LI|SPAN|A|BUTTON|OPTION)$/.test(n.parentElement.tagName)){n.parentElement.dir='ltr';n.parentElement.style.textAlign='';} }
     }
