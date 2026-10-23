@@ -665,8 +665,9 @@ html[dir="rtl"] p,html[dir="rtl"] h1,html[dir="rtl"] h2,html[dir="rtl"] h3,html[
     if(btn){btn.textContent=lang==='ar'?'English':'العربية';btn.setAttribute('aria-label',lang==='ar'?'Switch to English':'التبديل إلى العربية');}
     const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode(n){
       if(!n.nodeValue.trim()||n.parentElement.closest(skip)||n.parentElement.id==='cvm-locale-toggle') return NodeFilter.FILTER_REJECT;
-      /* Never rewrite live prices, currency values, or price controls: these may be recalculated by the site's own scripts. */
-      if(n.parentElement.closest('[class*="price" i],[id*="price" i],[data-price],.currency,.amount,[class*="amount" i]')) return NodeFilter.FILTER_REJECT;
+      /* Leave prices and price/status messages untouched by the locale layer; the site's pricing logic owns these values. */
+      if(n.parentElement.closest('[class*="price" i],[id*="price" i],[data-price],.currency,.amount,[class*="amount" i],[class*="cost" i],[class*="quote" i]')) return NodeFilter.FILTER_REJECT;
+      if(/(?:EGP|SAR|AED|USD|\bprice\b|\bquote\b|\d[\d,.]*\s*(?:جنيه|ريال|درهم))/i.test(n.nodeValue)) return NodeFilter.FILTER_REJECT;
       return NodeFilter.FILTER_ACCEPT;
     }});
     let n;
