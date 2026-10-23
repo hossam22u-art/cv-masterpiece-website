@@ -22,17 +22,6 @@ jobs:
           const fs = require('fs');
           const sourcePath = 'index.html.html';
           let html = fs.readFileSync(sourcePath, 'utf8');
-          for (const term of ['SITE MANAGEMENT · DEMO','adminModal','data-open="adminModal"','admin-launcher','adminToggle','Admin control.','Prototype mode: requests']) {
-            const at = html.indexOf(term);
-            console.log('INSPECT_TERM ' + term + ' index=' + at);
-            if (at >= 0) console.log(html.slice(Math.max(0, at - 1800), Math.min(html.length, at + 1800)).replace(/\\s+/g,' ').slice(0,3600));
-          }
-          const inspectHtml = fs.readFileSync(sourcePath, 'utf8');
-          let searchAt = 0, found = 0;
-          while ((searchAt = inspectHtml.indexOf('adminModal', searchAt)) !== -1 && found < 20) {
-            console.log('ADMIN_OCCURRENCE ' + found + ' ' + inspectHtml.slice(Math.max(0,searchAt-350),Math.min(inspectHtml.length,searchAt+350)).replace(/\\s+/g,' '));
-            searchAt += 10; found++;
-          }
           const dict = {
             'CV Templates':'قوالب السيرة الذاتية','Our Experts':'فريق الخبراء','Client Feedback':'آراء العملاء','Services':'الخدمات','Portfolio':'معرض الأعمال','For Companies':'للشركات','How It Works':'كيف نعمل','Contact':'تواصل معنا','Saudi Arabia · SAR':'السعودية · ريال','Egypt · EGP':'مصر · جنيه','UAE · AED':'الإمارات · درهم','Start an Order':'ابدأ طلبك',
             'PROFESSIONAL CAREER BRANDING STUDIO':'استوديو احترافي لبناء هويتك المهنية','TURN YOUR':'حوّل','EXPERIENCE':'خبراتك','INTO':'إلى','OPPORTUNITIES.':'فرص حقيقية.','Career services, job search support and digital growth — crafted to help people and brands move forward.':'خدمات مهنية ودعم للبحث عن عمل وحلول للنمو الرقمي، مصممة لمساعدة الأفراد والعلامات التجارية على التقدم.','CV & Career Branding':'السيرة الذاتية والهوية المهنية','Job Search Support':'دعم البحث عن وظيفة','Digital Growth':'النمو الرقمي','Explore Services':'اكتشف الخدمات','View Our Work':'شاهد أعمالنا','Built around your next opportunity':'مصممة لفرصتك القادمة','CAREER IDENTITY':'هويتك المهنية','Designed around you':'مصممة خصيصًا لك','YOUR NEXT CHAPTER':'فصلك القادم','Starts with your story.':'يبدأ بقصتك.','SCROLL TO DISCOVER':'مرّر لاكتشاف المزيد','Personalized career solutions':'حلول مهنية مخصصة','Individual & business services':'خدمات للأفراد والشركات','Regional pricing options':'أسعار حسب الدولة','Room to grow with you':'ننمو معك خطوة بخطوة',
@@ -78,6 +67,8 @@ jobs:
           const script = `
           <style id="cvm-locale-preview-style">
           #cvm-locale-toggle{position:fixed;z-index:2147483647;bottom:22px;left:22px;top:auto;border:1px solid #ef4444;background:#111;color:#fff;padding:10px 16px;border-radius:999px;font:600 14px Arial,sans-serif;box-shadow:0 6px 22px #0003;cursor:pointer}
+          /* Public preview must never expose the local-only admin panel or its launcher. */
+          #adminOpen,#adminModal{display:none!important;visibility:hidden!important;pointer-events:none!important}
           /* Preview-only hero/video layout refinement: preserve the media artwork and keep copy in its own column. */
           .hero,.hero-section,.hero-main,[class*="hero-layout"],[class*="hero-grid"]{min-width:0}
           /* Precise layout override for the real hero markup: .hero-copy + .hero-art > .hero-video */
