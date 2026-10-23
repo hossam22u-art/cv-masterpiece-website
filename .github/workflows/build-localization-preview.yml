@@ -22,6 +22,11 @@ jobs:
           const fs = require('fs');
           const sourcePath = 'index.html.html';
           let html = fs.readFileSync(sourcePath, 'utf8');
+          for (const term of ['OVERVIEW','ABOUT OUR TEAM','The People Behind','Let’s dive into what']) {
+            const at = html.indexOf(term);
+            console.log('INSPECT_TERM ' + term + ' index=' + at);
+            if (at >= 0) console.log(html.slice(Math.max(0, at - 1800), Math.min(html.length, at + 1800)).replace(/\\s+/g,' ').slice(0,3600));
+          }
           const dict = {
             'CV Templates':'قوالب السيرة الذاتية','Our Experts':'فريق الخبراء','Client Feedback':'آراء العملاء','Services':'الخدمات','Portfolio':'معرض الأعمال','For Companies':'للشركات','How It Works':'كيف نعمل','Contact':'تواصل معنا','Saudi Arabia · SAR':'السعودية · ريال','Egypt · EGP':'مصر · جنيه','UAE · AED':'الإمارات · درهم','Start an Order':'ابدأ طلبك',
             'PROFESSIONAL CAREER BRANDING STUDIO':'استوديو احترافي لبناء هويتك المهنية','TURN YOUR':'حوّل','EXPERIENCE':'خبراتك','INTO':'إلى','OPPORTUNITIES.':'فرص حقيقية.','Career services, job search support and digital growth — crafted to help people and brands move forward.':'خدمات مهنية ودعم للبحث عن عمل وحلول للنمو الرقمي، مصممة لمساعدة الأفراد والعلامات التجارية على التقدم.','CV & Career Branding':'السيرة الذاتية والهوية المهنية','Job Search Support':'دعم البحث عن وظيفة','Digital Growth':'النمو الرقمي','Explore Services':'اكتشف الخدمات','View Our Work':'شاهد أعمالنا','Built around your next opportunity':'مصممة لفرصتك القادمة','CAREER IDENTITY':'هويتك المهنية','Designed around you':'مصممة خصيصًا لك','YOUR NEXT CHAPTER':'فصلك القادم','Starts with your story.':'يبدأ بقصتك.','SCROLL TO DISCOVER':'مرّر لاكتشاف المزيد','Personalized career solutions':'حلول مهنية مخصصة','Individual & business services':'خدمات للأفراد والشركات','Regional pricing options':'أسعار حسب الدولة','Room to grow with you':'ننمو معك خطوة بخطوة',
