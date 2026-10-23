@@ -22,7 +22,7 @@ jobs:
           const fs = require('fs');
           const sourcePath = 'index.html.html';
           let html = fs.readFileSync(sourcePath, 'utf8');
-          for (const term of ['SITE MANAGEMENT · DEMO','SITE MANAGEMENT','admin-panel','adminPanel','adminModal','admin-toggle','data-admin','Admin','demo-admin']) {
+          for (const term of ['SITE MANAGEMENT · DEMO','adminModal','data-open="adminModal"','admin-launcher','adminToggle','Admin control.','Prototype mode: requests']) {
             const at = html.indexOf(term);
             console.log('INSPECT_TERM ' + term + ' index=' + at);
             if (at >= 0) console.log(html.slice(Math.max(0, at - 1800), Math.min(html.length, at + 1800)).replace(/\\s+/g,' ').slice(0,3600));
