@@ -69,11 +69,19 @@ jobs:
           #cvm-locale-toggle{position:fixed;z-index:2147483647;bottom:22px;left:22px;top:auto;border:1px solid #ef4444;background:#111;color:#fff;padding:10px 16px;border-radius:999px;font:600 14px Arial,sans-serif;box-shadow:0 6px 22px #0003;cursor:pointer}
           /* Preview-only hero/video layout refinement: preserve the media artwork and keep copy in its own column. */
           .hero,.hero-section,.hero-main,[class*="hero-layout"],[class*="hero-grid"]{min-width:0}
-          .hero h1,.hero-section h1,.hero-main h1,[class*="hero"] h1{max-width:100%;overflow-wrap:normal;word-break:normal;line-height:1.08}
-          .hero p,.hero-section p,.hero-main p,[class*="hero"] p{max-width:38rem}
-          .hero video,.hero-section video,.hero-main video,[class*="hero"] video{display:block;width:100%;max-width:100%;height:auto;object-fit:contain;object-position:center}
+          /* Keep hero copy and media in separate, balanced columns. */
+          main>section:first-of-type{overflow:hidden}
+          main>section:first-of-type>div{min-width:0}
+          main>section:first-of-type img,main>section:first-of-type video{display:block;max-width:100%;height:auto;object-fit:contain;object-position:center}
+          main>section:first-of-type video{width:100%;max-height:64vh}
+          main>section:first-of-type h1{max-width:100%;overflow-wrap:normal;word-break:normal;line-height:1.12}
+          main>section:first-of-type p{max-width:42rem}
+          main>section:first-of-type [class*="visual"],main>section:first-of-type [class*="media"],main>section:first-of-type [class*="video"]{min-width:0;max-width:100%}
+          .hero h1,.hero-section h1,.hero-main h1,[class*="hero"] h1{max-width:100%;overflow-wrap:normal;word-break:normal;line-height:1.12}
+          .hero p,.hero-section p,.hero-main p,[class*="hero"] p{max-width:42rem}
+          .hero video,.hero-section video,.hero-main video,[class*="hero"] video{display:block;width:100%;max-width:100%;height:auto;max-height:64vh;object-fit:contain;object-position:center}
           .hero img,.hero-section img,.hero-main img,[class*="hero"] img{max-width:100%;height:auto;object-fit:contain}
-          @media(max-width:900px){.hero,.hero-section,.hero-main,[class*="hero-layout"],[class*="hero-grid"]{grid-template-columns:minmax(0,1fr)!important}.hero h1,.hero-section h1,.hero-main h1,[class*="hero"] h1{font-size:clamp(2.5rem,9vw,5rem)!important}.hero video,.hero-section video,.hero-main video,[class*="hero"] video{max-height:55vh}}
+          @media(max-width:900px){main>section:first-of-type>div{min-width:0}.hero,.hero-section,.hero-main,[class*="hero-layout"],[class*="hero-grid"]{grid-template-columns:minmax(0,1fr)!important}.hero h1,.hero-section h1,.hero-main h1,[class*="hero"] h1{font-size:clamp(2.5rem,9vw,5rem)!important}.hero video,.hero-section video,.hero-main video,[class*="hero"] video{max-height:55vh}}
           @media(min-width:901px){.hero h1,.hero-section h1,.hero-main h1,[class*="hero"] h1{font-size:clamp(3rem,5.2vw,5.8rem)}}
           html[dir="rtl"] body{direction:ltr}
           html[dir="rtl"] header,html[dir="rtl"] nav,html[dir="rtl"] [class*="grid"],html[dir="rtl"] [class*="flex"],html[dir="rtl"] [class*="row"],html[dir="rtl"] footer{direction:ltr}
