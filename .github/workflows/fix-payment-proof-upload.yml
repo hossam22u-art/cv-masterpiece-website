@@ -1,0 +1,63 @@
+name: Fix payment screenshot upload to orders
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-payment-proof-upload.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch-payment-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Connect selected proof to Supabase Storage and order row
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const path='index.html.html';
+          let html=fs.readFileSync(path,'utf8');
+          const marker='LIVE_SUPABASE_ORDER_HANDLER_V1';
+          const start=html.indexOf(marker);
+          if(start<0) throw new Error('Live order handler marker missing; refusing to modify.');
+          let head=html.slice(0,start), tail=html.slice(start);
+          const insert="const {error}=await client.from('orders').insert(payload);";
+          if(!tail.includes(insert)) throw new Error('Expected order insert statement not found; refusing to guess.');
+          if(tail.includes('CVM_PAYMENT_PROOF_UPLOAD_V2')) {
+            console.log('Payment proof upload patch already present.');
+            process.exit(0);
+          }
+          const uploadCode = `/* CVM_PAYMENT_PROOF_UPLOAD_V2 */
+              const proofInput=document.getElementById('paymentProof');
+              const proofFile=proofInput && proofInput.files ? proofInput.files[0] : null;
+              const proofRequired=['bank-transfer','mobile-wallet','instapay'].includes(String(order.paymentMethod||''));
+              if(proofRequired && !proofFile) throw new Error('Please attach a screenshot of the completed transfer.');
+              if(proofFile){
+                if(!/^image\\/(png|jpeg|webp)$/.test(proofFile.type)) throw new Error('Please choose a PNG, JPG or WEBP image.');
+                if(proofFile.size>5*1024*1024) throw new Error('The screenshot must be 5 MB or smaller.');
+                const ext=proofFile.type==='image/png'?'png':proofFile.type==='image/webp'?'webp':'jpg';
+                const proofPath='orders/'+Date.now()+'-'+Math.random().toString(36).slice(2,10)+'.'+ext;
+                const {error:uploadError}=await client.storage.from('payment-proofs').upload(proofPath,proofFile,{contentType:proofFile.type,upsert:false});
+                if(uploadError) throw new Error('Payment screenshot upload failed: '+uploadError.message);
+                payload.payment_screenshot_path='payment-proofs/'+proofPath;
+              }
+              /* END CVM_PAYMENT_PROOF_UPLOAD_V2 */
+              `;
+          tail=tail.replace(insert, uploadCode+'\n              '+insert);
+          // Remove misleading note that claimed selected screenshot was local-only, since upload now occurs in the live handler.
+          tail=tail.replace(",'Payment screenshot selected: '+selectedFile.name+' (local demo only; image is not uploaded to a server).'","")
+          html=head+tail;
+          if(!html.includes('CVM_PAYMENT_PROOF_UPLOAD_V2')) throw new Error('Upload code insertion failed.');
+          fs.writeFileSync(path,html);
+          console.log('Added storage upload before order insert and saves payment_screenshot_path.');
+          NODE
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html.html
+          git diff --cached --check
+          git diff --cached --quiet || (git commit -m "Upload payment screenshots with order submissions" && git push)
