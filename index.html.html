@@ -346,7 +346,23 @@ document.querySelectorAll('[data-order]').forEach(b=>b.addEventListener('click',
     const notes=[order.notes||'','Language: '+(order.language||'Not specified'),'Selected option: '+(order.option||'Not specified'),'Payment preference: '+String(order.paymentMethod||'confirm-with-team').replaceAll('-',' '),'Preferred expert: '+(document.getElementById('preferredExpert')?.value||'No preference'),order.bundleId?'Bundle ID: '+order.bundleId:''].filter(Boolean).join('\\n');
     const payload={customer_name:String(order.name||'').trim(),email:contact.includes('@')?contact:null,phone:contact,country:({EG:'Egypt',SA:'Saudi Arabia',AE:'UAE'})[order.country]||order.country||null,currency:String(order.currency||'EGP'),service_name:String(order.serviceName||order.serviceId||'').trim(),package_name:order.bundleId?String(order.serviceName):String(order.option||'').trim()||null,price:Number.isFinite(Number(order.price))&&Number(order.price)>=0?Number(order.price):0,notes:notes||null};
     if(payload.customer_name.length<2||payload.phone.length<5||payload.service_name.length<2)throw new Error('Please enter a valid name, contact method and service.');
-    const {error}=await client.from('orders').insert(payload);
+    /* CVM_PAYMENT_PROOF_UPLOAD_V2 */
+    const proofInput=document.getElementById('paymentProof');
+    const proofFile=proofInput && proofInput.files ? proofInput.files[0] : null;
+    const proofRequired=['bank-transfer','mobile-wallet','instapay'].includes(String(order.paymentMethod||''));
+    if(proofRequired && !proofFile) throw new Error('Please attach a screenshot of the completed transfer.');
+    if(proofFile){
+      if(!/^image\/(png|jpeg|webp)$/.test(proofFile.type)) throw new Error('Please choose a PNG, JPG or WEBP image.');
+      if(proofFile.size>5*1024*1024) throw new Error('The screenshot must be 5 MB or smaller.');
+      const ext=proofFile.type==='image/png'?'png':proofFile.type==='image/webp'?'webp':'jpg';
+      const proofPath='orders/'+Date.now()+'-'+Math.random().toString(36).slice(2,10)+'.'+ext;
+      const {error:uploadError}=await client.storage.from('payment-proofs').upload(proofPath,proofFile,{contentType:proofFile.type,upsert:false});
+      if(uploadError) throw new Error('Payment screenshot upload failed: '+uploadError.message);
+      payload.payment_screenshot_path='payment-proofs/'+proofPath;
+    }
+    /* END CVM_PAYMENT_PROOF_UPLOAD_V2 */
+    
+              const {error}=await client.from('orders').insert(payload);
     if(error)throw error;
     return {order_number:order.id};
   };
