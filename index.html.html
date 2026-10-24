@@ -348,7 +348,7 @@ document.querySelectorAll('[data-order]').forEach(b=>b.addEventListener('click',
     if(payload.customer_name.length<2||payload.phone.length<5||payload.service_name.length<2)throw new Error('Please enter a valid name, contact method and service.');
     const {error}=await client.from('orders').insert(payload);
     if(error)throw error;
-    return data;
+    return {order_number:order.id};
   };
 })();
 const orderForm=document.getElementById('orderForm');
