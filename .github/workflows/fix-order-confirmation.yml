@@ -1,0 +1,47 @@
+name: Fix order confirmation after successful save
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-order-confirmation.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fix-confirmation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fix successful order response safely
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'index.html.html';
+          let html = fs.readFileSync(path, 'utf8');
+          const marker = 'LIVE_SUPABASE_ORDER_HANDLER_V1';
+          const i = html.indexOf(marker);
+          if (i < 0) throw new Error('Live order handler marker not found; refusing to edit.');
+          const before = html.slice(0, i);
+          let tail = html.slice(i);
+          const broken = "const {error}=await client.from('orders').insert(payload);";
+          if (!tail.includes(broken)) {
+            if (tail.includes("return {order_number:order.id};")) {
+              console.log('Order insert already returns a safe order number; no change needed.');
+              process.exit(0);
+            }
+            throw new Error('Expected insert query not found in live handler; refusing to guess.');
+          }
+          tail = tail.replace(broken, "const {error}=await client.from('orders').insert(payload);");
+          const brokenReturn = 'return data;';
+          if (!tail.includes(brokenReturn)) throw new Error('Expected return data statement not found; refusing to edit.');
+          tail = tail.replace(brokenReturn, 'return {order_number:order.id};');
+          html = before + tail;
+          fs.writeFileSync(path, html);
+          console.log('Fixed confirmation response: successful insert now returns the generated order number.');
+          NODE
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html.html
+          git diff --cached --quiet || (git commit -m "Fix successful order confirmation response" && git push)
