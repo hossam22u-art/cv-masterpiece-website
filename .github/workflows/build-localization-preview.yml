@@ -208,7 +208,7 @@ jobs:
               const fileInput=form&&form.querySelector('input[type="file"]');
               const file=fileInput&&fileInput.files&&fileInput.files[0];
               if(!file) return nativeFetch(input,init);
-              if(!/^image\/(png|jpeg|webp)$/.test(file.type)||file.size>5*1024*1024) throw new Error('Payment screenshot must be PNG, JPG or WEBP and under 5 MB.');
+              if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>5*1024*1024) throw new Error('Payment screenshot must be PNG, JPG or WEBP and under 5 MB.');
               uploading=true;
               try{
                 const ext=file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg';
@@ -234,7 +234,11 @@ jobs:
             };
           })();
           <\/script>`;
-          html = html.slice(0, insertAt) + paymentUpload + script + html.slice(insertAt);
+          const headInsertAt = html.toLowerCase().lastIndexOf('</head>');
+          if (headInsertAt < 0) throw new Error('Could not find closing head tag; refusing to alter source.');
+          html = html.slice(0, headInsertAt) + paymentUpload + html.slice(headInsertAt);
+          const bodyInsertAt = html.toLowerCase().lastIndexOf('</body>');
+          html = html.slice(0, bodyInsertAt) + script + html.slice(bodyInsertAt);
           fs.writeFileSync('bilingual-preview.html', html);
           console.log('Preview generated; original production file untouched.');
           console.log('Translation entries: ' + Object.keys(dict).length);
