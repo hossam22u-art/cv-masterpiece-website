@@ -193,7 +193,48 @@ jobs:
           html = html.slice(0, html.toLowerCase().lastIndexOf('</body>')) + orderProofGuard + html.slice(html.toLowerCase().lastIndexOf('</body>'));
           const insertAt = html.toLowerCase().lastIndexOf('</body>');
           if (insertAt < 0) throw new Error('Could not find closing body tag; refusing to alter source.');
-          html = html.slice(0, insertAt) + script + html.slice(insertAt);
+          const paymentUpload = `
+          <script id="cvm-payment-proof-upload">
+          (function(){
+            const SUPABASE_URL='https://boyaotdatuquzuqolglk.supabase.co';
+            const SUPABASE_KEY='sb_publishable_ov9S-hCo_QqowNsMZaMESg_OIPL3K_y';
+            const nativeFetch=window.fetch.bind(window);
+            let uploading=false;
+            window.fetch=async function(input,init){
+              const url=typeof input==='string'?input:(input&&input.url)||'';
+              const method=String((init&&init.method)||(input&&input.method)||'GET').toUpperCase();
+              if(uploading||method!=='POST'||!url.includes('/rest/v1/orders')) return nativeFetch(input,init);
+              const form=[...document.querySelectorAll('form')].find(f=>/order|request|طلب/i.test((f.id||'')+' '+(f.className||'')+' '+(f.innerText||'')));
+              const fileInput=form&&form.querySelector('input[type="file"]');
+              const file=fileInput&&fileInput.files&&fileInput.files[0];
+              if(!file) return nativeFetch(input,init);
+              if(!/^image\/(png|jpeg|webp)$/.test(file.type)||file.size>5*1024*1024) throw new Error('Payment screenshot must be PNG, JPG or WEBP and under 5 MB.');
+              uploading=true;
+              try{
+                const ext=file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg';
+                const path='orders/'+Date.now()+'-'+Math.random().toString(36).slice(2)+'.'+ext;
+                const upload=await nativeFetch(SUPABASE_URL+'/storage/v1/object/payment-proofs/'+path,{method:'POST',headers:{apikey:SUPABASE_KEY,Authorization:'Bearer '+SUPABASE_KEY,'Content-Type':file.type,'x-upsert':'false'},body:file});
+                if(!upload.ok) throw new Error('Could not upload payment proof (HTTP '+upload.status+'). Check the payment-proofs bucket setup in Supabase.');
+                const headers=new Headers(init&&init.headers||{});
+                const body=init&&init.body;
+                if(typeof body==='string'){
+                  let payload;
+                  try{payload=JSON.parse(body)}catch(e){payload=null}
+                  if(payload&&typeof payload==='object'&&!Array.isArray(payload)){
+                    payload.payment_screenshot_path='payment-proofs/'+path;
+                    init={...init,body:JSON.stringify(payload),headers};
+                  }else if(Array.isArray(payload)){
+                    payload=payload.map(row=>({...row,payment_screenshot_path:'payment-proofs/'+path}));
+                    init={...init,body:JSON.stringify(payload),headers};
+                  }
+                }
+                return await nativeFetch(input,init);
+              }catch(error){console.error('[CV Masterpiece payment proof]',error);alert(error.message||'Payment screenshot upload failed. Please try again.');throw error}
+              finally{uploading=false}
+            };
+          })();
+          <\/script>`;
+          html = html.slice(0, insertAt) + paymentUpload + script + html.slice(insertAt);
           fs.writeFileSync('bilingual-preview.html', html);
           console.log('Preview generated; original production file untouched.');
           console.log('Translation entries: ' + Object.keys(dict).length);
