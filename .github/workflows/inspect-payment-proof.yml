@@ -1,0 +1,26 @@
+name: Inspect payment screenshot flow
+on:
+  push:
+    paths:
+      - '.github/workflows/inspect-payment-proof.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect payment proof code safely
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const h=fs.readFileSync('index.html.html','utf8');
+          for (const term of ['payment screenshot selected','payment_screenshot_path','paymentProof','payment-proof','type="file"','submitCvmLiveOrder']) {
+            let p=-1,n=0;
+            while((p=h.toLowerCase().indexOf(term.toLowerCase(),p+1))>=0 && n<8) {
+              console.log('\\n--- '+term+' occurrence '+(++n)+' at '+p+' ---\\n'+h.slice(Math.max(0,p-900),Math.min(h.length,p+1700)));
+            }
+            if(!n) console.log('\\n--- '+term+': NOT FOUND ---');
+          }
+          NODE
