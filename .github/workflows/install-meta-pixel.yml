@@ -48,6 +48,43 @@ jobs:
           fs.writeFileSync(file, html);
           console.log('Meta Pixel installed before </head>.');
           NODE
+      - name: Add Meta Contact and Lead events
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const file = 'index.html.html';
+          let html = fs.readFileSync(file, 'utf8');
+          const orderAnchor = "const orderForm=document.getElementById('orderForm');\\norderForm.addEventListener('submit',async e=>{";
+          if (!html.includes(orderAnchor)) throw new Error('Order form submit handler anchor not found.');
+          if (html.includes('CVM_META_CONTACT_EVENT_V1') || html.includes('CVM_META_LEAD_EVENT_V1')) {
+            console.log('Meta Contact/Lead handlers already present; skipping duplicate insertion.');
+          } else {
+            const contact = `/* CVM_META_CONTACT_EVENT_V1 */
+          document.addEventListener('click',function(event){
+            const link=event.target.closest('a[href*="wa.me"]');
+            if(!link||typeof window.fbq!=='function')return;
+            window.fbq('track','Contact',{content_name:'WhatsApp contact',content_category:'CV Masterpiece'});
+          });
+          `;
+            html = html.replace(orderAnchor, contact + orderAnchor);
+            const leadAnchor = "const saved=await window.submitCvmLiveOrder(order);\\n    order.id=saved.order_number||order.id;";
+            if (!html.includes(leadAnchor)) throw new Error('Successful order insert anchor not found.');
+            const lead = `const saved=await window.submitCvmLiveOrder(order);
+            /* CVM_META_LEAD_EVENT_V1: fire only after Supabase confirms order insert */
+            if(typeof window.fbq==='function'){
+              window.fbq('track','Lead',{
+                content_name:String(order.serviceName||'CV Masterpiece service'),
+                content_category:'CV service order',
+                value:Number(order.price)||0,
+                currency:String(order.currency||'EGP')
+              });
+            }
+            order.id=saved.order_number||order.id;`;
+            html = html.replace(leadAnchor, lead);
+            fs.writeFileSync(file, html);
+            console.log('Added WhatsApp Contact and successful-order Lead events.');
+          }
+          NODE
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
