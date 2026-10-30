@@ -1,0 +1,76 @@
+name: Auto-select visitor price market
+on:
+  push:
+    paths:
+      - '.github/workflows/market-auto-detect.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  add-market-detection:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install price market auto-detection
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const file = 'index.html.html';
+          let html = fs.readFileSync(file, 'utf8');
+          if (html.includes('CVM_MARKET_AUTO_DETECT_V1')) {
+            console.log('Market detection already installed.');
+            process.exit(0);
+          }
+          const script = String.raw`<script id="cvm-market-auto-detect">
+          /* CVM_MARKET_AUTO_DETECT_V1
+             Selects the visitor's price market from browser time zone/locale.
+             Manual market selection is saved and takes priority on later visits.
+          */
+          (() => {
+            const KEY = 'cvm_price_market_override';
+            const select = document.getElementById('countrySelect');
+            const orderCountry = document.getElementById('orderCountry');
+            if (!select) return;
+            const detectMarket = () => {
+              let timezone = '';
+              try { timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (_) {}
+              if (timezone === 'Africa/Cairo') return 'EG';
+              if (timezone === 'Asia/Riyadh') return 'SA';
+              if (timezone === 'Asia/Dubai') return 'AE';
+              const locale = String(navigator.language || '').toLowerCase();
+              if (/(^|[-_])eg($|[-_])/.test(locale)) return 'EG';
+              if (/(^|[-_])sa($|[-_])/.test(locale)) return 'SA';
+              if (/(^|[-_])ae($|[-_])/.test(locale)) return 'AE';
+              return select.value || 'SA';
+            };
+            let market = '';
+            try { market = localStorage.getItem(KEY) || ''; } catch (_) {}
+            if (!['EG', 'SA', 'AE'].includes(market)) market = detectMarket();
+            if (!Array.from(select.options).some(option => option.value === market)) market = 'SA';
+            select.value = market;
+            if (orderCountry) orderCountry.value = market;
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            select.addEventListener('change', () => {
+              const chosen = select.value;
+              if (!['EG', 'SA', 'AE'].includes(chosen)) return;
+              try { localStorage.setItem(KEY, chosen); } catch (_) {}
+              if (orderCountry) orderCountry.value = chosen;
+            });
+          })();
+          </script>`;
+          const close = html.toLowerCase().lastIndexOf('</body>');
+          if (close < 0) throw new Error('Could not find closing body tag.');
+          html = html.slice(0, close) + script + '\\n' + html.slice(close);
+          fs.writeFileSync(file, html);
+          console.log('Installed visitor price market detection.');
+          NODE
+      - name: Commit and push website
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html.html
+          git commit -m "Auto-select price list by visitor market" || echo "No changes to commit"
+          git push
