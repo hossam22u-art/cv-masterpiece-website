@@ -631,4 +631,74 @@ renderAll();
 })();
 </script>
 
+<script id="cvm-auto-market">
+/* CVM_AUTO_MARKET_V1 */
+(() => {
+  const KEY = 'cvm_market_override';
+  const MARKET_KEY = 'cvm_detected_market';
+  const markets = {
+    EG: { names: ['Egypt', 'مصر', 'EG'], currency: 'EGP' },
+    SA: { names: ['Saudi Arabia', 'Saudi', 'KSA', 'السعودية', 'المملكة العربية السعودية', 'SA'], currency: 'SAR' }
+  };
+  const norm = value => String(value || '').trim().toLowerCase();
+  const matchMarket = (option, code) => {
+    const m = markets[code];
+    const v = norm(option.value), t = norm(option.textContent);
+    return m.names.some(name => {
+      const n = norm(name);
+      return v === n || t === n || t.includes(n);
+    });
+  };
+  function applyMarket(code) {
+    if (!markets[code]) return false;
+    let changed = false;
+    document.querySelectorAll('select').forEach(select => {
+      const option = [...select.options].find(o => matchMarket(o, code));
+      if (!option) return;
+      if (select.value !== option.value) {
+        select.value = option.value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      select.dataset.cvmAutoMarket = code;
+      changed = true;
+    });
+    try { localStorage.setItem(MARKET_KEY, code); } catch (_) {}
+    document.documentElement.dataset.cvmMarket = code;
+    return changed;
+  }
+  async function detect() {
+    let code = '';
+    try {
+      const response = await fetch('https://ipwho.is/', { cache: 'no-store' });
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.success && data.country_code) code = String(data.country_code).toUpperCase();
+      }
+    } catch (_) {}
+    if (!markets[code]) {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+      if (tz === 'Africa/Cairo') code = 'EG';
+      if (tz === 'Asia/Riyadh' || tz === 'Asia/Jeddah') code = 'SA';
+    }
+    let manual = '';
+    try { manual = localStorage.getItem(KEY) || ''; } catch (_) {}
+    if (markets[manual]) code = manual;
+    if (markets[code]) applyMarket(code);
+  }
+  document.addEventListener('change', event => {
+    const select = event.target;
+    if (!(select instanceof HTMLSelectElement)) return;
+    const selected = [...select.options].find(o => o.selected);
+    for (const code of Object.keys(markets)) {
+      if (selected && matchMarket(selected, code)) {
+        try { localStorage.setItem(KEY, code); } catch (_) {}
+        document.documentElement.dataset.cvmMarket = code;
+        break;
+      }
+    }
+  }, true);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', detect, { once: true });
+  else detect();
+})();
+</script>
 </body></html>
