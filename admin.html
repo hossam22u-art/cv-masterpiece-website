@@ -30,6 +30,63 @@ $('loginForm').onsubmit=async e=>{e.preventDefault();setError('loginError','Sign
 $('logout').onclick=async()=>{await cvmSupabaseClient.auth.signOut();show('loginPanel')};
 $('refresh').onclick=loadOrders;$('search').oninput=renderOrders;$('filter').onchange=renderOrders;
 async function loadOrders(){ $('message').textContent='Loading…';const {data,error}=await cvmSupabaseClient.from('orders').select('*').order('created_at',{ascending:false}).limit(500);if(error){$('message').textContent='Could not load orders: '+error.message;return}allOrders=data||[];renderOrders()}
-function renderOrders(){const q=$('search').value.toLowerCase(),f=$('filter').value;const rows=allOrders.filter(o=>(!f||o.status===f)&&(!q||[o.order_number,o.customer_name,o.phone,o.email,o.service_name,o.package_name].some(v=>String(v||'').toLowerCase().includes(q))));$('total').textContent=allOrders.length;$('newCount').textContent=allOrders.filter(o=>o.status==='New').length;$('progressCount').textContent=allOrders.filter(o=>o.status==='In progress').length;$('doneCount').textContent=allOrders.filter(o=>o.status==='Completed').length;$('message').textContent=rows.length+' order(s)';const body=$('orders');body.replaceChildren();if(!rows.length){body.innerHTML='<tr><td colspan="6" class="empty">No orders found.</td></tr>';return}for(const o of rows){const tr=document.createElement('tr');const add=(text,sub='')=>{const td=document.createElement('td');td.textContent=text||'—';if(sub){const small=document.createElement('div');small.className='muted';small.textContent=sub;td.appendChild(small)}tr.appendChild(td)};add(o.order_number||o.id?.slice(0,8),new Date(o.created_at).toLocaleString());add(o.customer_name,o.phone||o.email);add(o.service_name,o.package_name);add((o.country||'')+' · '+(o.price==null?'':Number(o.price).toLocaleString()+' '+(o.currency||'')));const seltd=document.createElement('td');seltd.textContent=new Date(o.created_at).toLocaleDateString();tr.appendChild(seltd);const td=document.createElement('td'),sel=document.createElement('select');sel.className='status';['New','In progress','Completed','Cancelled'].forEach(s=>{const op=document.createElement('option');op.value=s;op.textContent=s;op.selected=(o.status||'New')===s;sel.appendChild(op)});sel.onchange=async()=>{sel.disabled=true;const {error}=await cvmSupabaseClient.from('orders').update({status:sel.value}).eq('id',o.id);sel.disabled=false;if(error){alert('Status update failed: '+error.message);return}o.status=sel.value;renderOrders()};td.appendChild(sel);tr.appendChild(td);const proofTd=document.createElement('td');const proofPath=String(o.payment_screenshot_path||'').trim();if(proofPath){const proofBtn=document.createElement('button');proofBtn.className='secondary';proofBtn.textContent='View proof';proofBtn.onclick=async()=>{proofBtn.disabled=true;try{let path=proofPath.replace(/^payment-proofs\//,'').replace(/^\//,'');if(/^https?:\/\//i.test(path)){window.open(path,'_blank','noopener');return}const {data,error}=await cvmSupabaseClient.storage.from('payment-proofs').createSignedUrl(path,300);if(error||!data?.signedUrl)throw error||new Error('Could not create image link');window.open(data.signedUrl,'_blank','noopener')}catch(e){alert('Could not open payment proof: '+(e?.message||'unknown error'))}finally{proofBtn.disabled=false}};proofTd.appendChild(proofBtn)}else{proofTd.textContent='Not uploaded';proofTd.className='muted'}tr.appendChild(proofTd);body.appendChild(tr)}}
+async function setPaymentStatus(order,status){
+  let reason=null;
+  if(status==='Rejected'){
+    reason=prompt('Reason for rejecting this payment proof (required):');
+    if(!reason||!reason.trim()){alert('Please enter a rejection reason.');return}
+  }
+  const {data:userData,error:userError}=await cvmSupabaseClient.auth.getUser();
+  if(userError||!userData?.user){alert('Could not verify the admin session. Please sign in again.');return}
+  const patch={
+    payment_status:status,
+    payment_verified_at:status==='Pending'?null:new Date().toISOString(),
+    payment_verified_by:status==='Pending'?null:userData.user.id,
+    payment_rejection_reason:status==='Rejected'?reason.trim():null
+  };
+  const {error}=await cvmSupabaseClient.from('orders').update(patch).eq('id',order.id);
+  if(error){alert('Payment update failed: '+error.message);return}
+  Object.assign(order,patch);
+  renderOrders();
+}
+function renderOrders(){
+  const q=$('search').value.toLowerCase(),f=$('filter').value;
+  const rows=allOrders.filter(o=>(!f||o.status===f)&&(!q||[o.order_number,o.customer_name,o.phone,o.email,o.service_name,o.package_name].some(v=>String(v||'').toLowerCase().includes(q))));
+  $('total').textContent=allOrders.length;
+  $('newCount').textContent=allOrders.filter(o=>o.status==='New').length;
+  $('progressCount').textContent=allOrders.filter(o=>o.status==='In progress').length;
+  $('doneCount').textContent=allOrders.filter(o=>o.status==='Completed').length;
+  $('message').textContent=rows.length+' order(s)';
+  const body=$('orders');body.replaceChildren();
+  if(!rows.length){body.innerHTML='<tr><td colspan="7" class="empty">No orders found.</td></tr>';return}
+  for(const o of rows){
+    const tr=document.createElement('tr');
+    const add=(text,sub='')=>{const td=document.createElement('td');td.textContent=text||'—';if(sub){const small=document.createElement('div');small.className='muted';small.textContent=sub;td.appendChild(small)}tr.appendChild(td)};
+    add(o.order_number||o.id?.slice(0,8),new Date(o.created_at).toLocaleString());
+    add(o.customer_name,o.phone||o.email);
+    add(o.service_name,o.package_name);
+    add((o.country||'')+' · '+(o.price==null?'':Number(o.price).toLocaleString()+' '+(o.currency||'')));
+    const seltd=document.createElement('td');seltd.textContent=new Date(o.created_at).toLocaleDateString();tr.appendChild(seltd);
+    const td=document.createElement('td'),sel=document.createElement('select');sel.className='status';
+    ['New','In progress','Completed','Cancelled'].forEach(s=>{const op=document.createElement('option');op.value=s;op.textContent=s;op.selected=(o.status||'New')===s;sel.appendChild(op)});
+    sel.onchange=async()=>{sel.disabled=true;const {error}=await cvmSupabaseClient.from('orders').update({status:sel.value}).eq('id',o.id);sel.disabled=false;if(error){alert('Status update failed: '+error.message);return}o.status=sel.value;renderOrders()};
+    td.appendChild(sel);tr.appendChild(td);
+    const proofTd=document.createElement('td');
+    const proofPath=String(o.payment_screenshot_path||'').trim();
+    const paymentStatus=o.payment_status||'Pending';
+    const statusLine=document.createElement('div');statusLine.className='muted';statusLine.textContent='Payment: '+paymentStatus;proofTd.appendChild(statusLine);
+    if(proofPath){
+      const proofBtn=document.createElement('button');proofBtn.className='secondary';proofBtn.textContent='View proof';
+      proofBtn.onclick=async()=>{proofBtn.disabled=true;try{let path=proofPath.replace(/^payment-proofs\//,'').replace(/^\//,'');if(/^https?:\/\//i.test(path)){window.open(path,'_blank','noopener');return}const {data,error}=await cvmSupabaseClient.storage.from('payment-proofs').createSignedUrl(path,300);if(error||!data?.signedUrl)throw error||new Error('Could not create image link');window.open(data.signedUrl,'_blank','noopener')}catch(e){alert('Could not open payment proof: '+(e?.message||'unknown error'))}finally{proofBtn.disabled=false}};
+      proofTd.appendChild(proofBtn);
+      const actions=document.createElement('div');actions.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-top:8px';
+      const approve=document.createElement('button');approve.textContent='Confirm payment';approve.disabled=paymentStatus==='Approved';approve.onclick=()=>setPaymentStatus(o,'Approved');actions.appendChild(approve);
+      const reject=document.createElement('button');reject.className='secondary';reject.textContent='Reject';reject.disabled=paymentStatus==='Rejected';reject.onclick=()=>setPaymentStatus(o,'Rejected');actions.appendChild(reject);
+      proofTd.appendChild(actions);
+      if(o.payment_rejection_reason){const note=document.createElement('div');note.className='muted';note.textContent='Reason: '+o.payment_rejection_reason;proofTd.appendChild(note)}
+    }else{const missing=document.createElement('div');missing.className='muted';missing.textContent='No screenshot uploaded';proofTd.appendChild(missing)}
+    tr.appendChild(proofTd);body.appendChild(tr);
+  }
+}
 connect();
 </script></body></html>
