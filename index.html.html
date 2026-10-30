@@ -383,6 +383,12 @@ document.querySelectorAll('[data-order]').forEach(b=>b.addEventListener('click',
     return {order_number:order.id};
   };
 })();
+/* CVM_META_CONTACT_EVENT_V1 */
+document.addEventListener('click',function(event){
+  const link=event.target.closest('a[href*="wa.me"]');
+  if(!link||typeof window.fbq!=='function')return;
+  window.fbq('track','Contact',{content_name:'WhatsApp contact',content_category:'CV Masterpiece'});
+});
 const orderForm=document.getElementById('orderForm');
 orderForm.addEventListener('submit',async e=>{
   e.preventDefault();
@@ -394,7 +400,16 @@ orderForm.addEventListener('submit',async e=>{
   const order={id:'REQ-'+Date.now().toString().slice(-7),createdAt:new Date().toISOString(),serviceId:id,serviceName:selectedBundle?selectedBundle.name:(service?.name||id),bundleId:selectedBundle?.id||null,country,language,option,price,currency:selectedBundle?selectedBundle.currency:MARKET[country].currency,name:document.getElementById('customerName').value.trim(),contact:document.getElementById('customerContact').value.trim(),notes:document.getElementById('customerNotes').value.trim(),paymentMethod,status:'Pending manual payment instructions'};
   try{
     const saved=await window.submitCvmLiveOrder(order);
-    order.id=saved.order_number||order.id;
+  /* CVM_META_LEAD_EVENT_V1: fire only after Supabase confirms order insert */
+  if(typeof window.fbq==='function'){
+    window.fbq('track','Lead',{
+      content_name:String(order.serviceName||'CV Masterpiece service'),
+      content_category:'CV service order',
+      value:Number(order.price)||0,
+      currency:String(order.currency||'EGP')
+    });
+  }
+  order.id=saved.order_number||order.id;
     db.orders.unshift(order);saveDB();
     orderForm.hidden=true;
     const success=document.getElementById('orderSuccess');success.hidden=false;
