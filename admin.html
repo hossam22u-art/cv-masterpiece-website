@@ -47,6 +47,18 @@ async function setPaymentStatus(order,status){
   const {error}=await cvmSupabaseClient.from('orders').update(patch).eq('id',order.id);
   if(error){alert('Payment update failed: '+error.message);return}
   Object.assign(order,patch);
+  if(status==='Approved'){
+    const {data:sessionData}=await cvmSupabaseClient.auth.getSession();
+    if(!sessionData?.session?.access_token){
+      alert('Payment approved, but the Meta Purchase event could not be sent because the admin session is missing. Sign in again and retry only after checking the order status.');
+    }else{
+      const {data:eventData,error:eventError}=await cvmSupabaseClient.functions.invoke('meta-purchase',{body:{order_id:order.id}});
+      if(eventError||eventData?.error){
+        console.error('Meta Purchase event error',eventError||eventData);
+        alert('Payment approved. Meta Purchase event was not confirmed: '+(eventData?.error||eventError?.message||'unknown error')+'. Do not approve the payment again; we can retry the event safely after checking the status.');
+      }
+    }
+  }
   renderOrders();
 }
 function renderOrders(){
