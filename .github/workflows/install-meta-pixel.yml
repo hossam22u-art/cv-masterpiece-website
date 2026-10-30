@@ -1,0 +1,61 @@
+name: Install CV Masterpiece Meta Pixel
+
+on:
+  push:
+    paths:
+      - '.github/workflows/install-meta-pixel.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install-pixel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Meta Pixel base code
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const file = 'index.html.html';
+          let html = fs.readFileSync(file, 'utf8');
+          const pixelId = '2411520589207773';
+          if (html.includes(pixelId)) {
+            console.log('Meta Pixel already installed; no duplicate added.');
+            process.exit(0);
+          }
+          const pixel = `<!-- Meta Pixel Code -->
+          <script>
+          !function(f,b,e,v,n,t,s)
+          {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+          n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+          if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+          n.queue=[];t=b.createElement(e);t.async=!0;
+          t.src=v;s=b.getElementsByTagName(e)[0];
+          s.parentNode.insertBefore(t,s)}(window, document,'script',
+          'https://connect.facebook.net/en_US/fbevents.js');
+          fbq('init', '${pixelId}');
+          fbq('track', 'PageView');
+          </script>
+          <noscript><img height="1" width="1" style="display:none"
+          src="https://www.facebook.com/tr?id=${pixelId}&ev=PageView&noscript=1"
+          /></noscript>
+          <!-- End Meta Pixel Code -->`;
+          const headClose = html.toLowerCase().indexOf('</head>');
+          if (headClose < 0) throw new Error('Closing </head> tag not found.');
+          html = html.slice(0, headClose) + pixel + '\\n' + html.slice(headClose);
+          fs.writeFileSync(file, html);
+          console.log('Meta Pixel installed before </head>.');
+          NODE
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html.html
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Install Meta Pixel base code"
+          git push
