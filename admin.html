@@ -25,8 +25,8 @@ function setError(id,msg){$(id).textContent=msg||''}
 function show(which){['setup','loginPanel','dashboard'].forEach(id=>$(id).classList.toggle('hidden',id!==which));$('logout').classList.toggle('hidden',which!=='dashboard')}
 function config(){return {url:'https://boyaotdatuquzuqolglk.supabase.co',key:'sb_publishable_ov9S-hCo_QqowNsMZaMESg_OIPL3K_y'}}
 async function enterAdminDashboard(){
-  const {data,isAdminError}=await cvmSupabaseClient.rpc('is_cvm_admin');
-  if(isAdminError||data!==true){
+  const {data,error:adminError}=await cvmSupabaseClient.rpc('is_cvm_admin');
+  if(adminError||data!==true){
     await cvmSupabaseClient.auth.signOut();
     show('loginPanel');
     setError('loginError','Access denied. This account is not registered as a CV Masterpiece administrator.');
