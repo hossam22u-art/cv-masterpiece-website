@@ -1,4 +1,4 @@
-name: Add bilingual language switcher
+name: Add bilingual language switcher\n# deployment trigger refresh
 on:
   push:
     branches: [main]
