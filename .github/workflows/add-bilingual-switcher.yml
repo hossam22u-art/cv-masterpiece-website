@@ -49,10 +49,10 @@ jobs:
             function protectBrand(){
               document.querySelectorAll('.brand,.brand-name,[aria-label*="CV Masterpiece"],[alt*="CV Masterpiece"]').forEach(function(el){el.setAttribute('translate','no');el.classList.add('notranslate')});
               var walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
-              var nodes=[];while(walker.nextNode())if(/CV\\s*Masterpiece|CV\\s+MASTERPIECE/i.test(walker.currentNode.nodeValue))nodes.push(walker.currentNode);
+              var nodes=[];while(walker.nextNode())if(/CV Masterpiece|CV MASTERPIECE/i.test(walker.currentNode.nodeValue))nodes.push(walker.currentNode);
               nodes.forEach(function(node){
                 if(node.parentElement.closest('script,style,textarea,input,.notranslate,[translate="no"]'))return;
-                var re=/(CV\\s*Masterpiece|CV\\s+MASTERPIECE)/ig, frag=document.createDocumentFragment(),last=0,m;
+                var re=/(CV Masterpiece|CV MASTERPIECE)/ig, frag=document.createDocumentFragment(),last=0,m;
                 while((m=re.exec(node.nodeValue))){frag.appendChild(document.createTextNode(node.nodeValue.slice(last,m.index)));var span=document.createElement('span');span.className='notranslate';span.setAttribute('translate','no');span.textContent=m[0];frag.appendChild(span);last=re.lastIndex}
                 frag.appendChild(document.createTextNode(node.nodeValue.slice(last)));node.parentNode.replaceChild(frag,node);
               });
