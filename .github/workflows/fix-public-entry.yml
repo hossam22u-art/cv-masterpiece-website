@@ -1,0 +1,48 @@
+name: Fix public entry point and hide legacy admin preview
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-public-entry.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fix-public-entry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove public Admin Preview and publish correct entry filename
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const source = 'index.html.html';
+          if (!fs.existsSync(source)) throw new Error('Missing existing website source: ' + source);
+          let html = fs.readFileSync(source, 'utf8');
+          // Remove footer links and legacy preview launch controls from the public site.
+          html = html.replace(/<a\\b[^>]*>\\s*Admin\\s*preview\\s*<\\/a>/gi, '');
+          html = html.replace(/<button\\b[^>]*>\\s*Admin\\s*preview\\s*<\\/button>/gi, '');
+          html = html.replace(/<a\\b[^>]*href=["'][^"']*admin(?:\\.html|-preview)[^"']*["'][^>]*>[\\s\\S]*?<\\/a>/gi, '');
+          const guard = `
+          <style id="cvm-public-admin-preview-guard">
+          a[href*="admin.html"],a[href*="admin-preview"],.admin-link,[data-admin-preview]{display:none!important}
+          </style>
+          <script id="cvm-public-admin-preview-guard-script">
+          (()=>{const clean=()=>document.querySelectorAll('a,button,[role="button"]').forEach(el=>{const t=(el.textContent||'').trim().toLowerCase();const h=(el.getAttribute('href')||'').toLowerCase();if(t==='admin preview'||h.includes('admin-preview'))el.remove()});};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',clean);else clean();new MutationObserver(clean).observe(document.documentElement,{childList:true,subtree:true});})();
+          </script>`;
+          if (!html.includes('cvm-public-admin-preview-guard-script')) {
+            const i=html.toLowerCase().lastIndexOf('</body>');
+            if(i<0) throw new Error('Could not locate closing body tag');
+            html=html.slice(0,i)+guard+'\\n'+html.slice(i);
+          }
+          fs.writeFileSync(source,html);
+          fs.writeFileSync('index.html',html);
+          console.log('Created index.html and removed public Admin Preview entry.');
+          NODE
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html index.html.html
+          if git diff --cached --quiet; then echo "No changes"; exit 0; fi
+          git commit -m "Fix public entry point and hide admin preview"
+          git push
