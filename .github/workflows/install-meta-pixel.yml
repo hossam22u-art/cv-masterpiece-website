@@ -54,7 +54,7 @@ jobs:
           const fs = require('fs');
           const file = 'index.html.html';
           let html = fs.readFileSync(file, 'utf8');
-          const orderAnchor = "const orderForm=document.getElementById('orderForm');\norderForm.addEventListener('submit',async e=>{";
+          const orderAnchor = "const orderForm=document.getElementById('orderForm');\\norderForm.addEventListener('submit',async e=>{";
           if (!html.includes(orderAnchor)) throw new Error('Order form submit handler anchor not found.');
           if (html.includes('CVM_META_CONTACT_EVENT_V1') || html.includes('CVM_META_LEAD_EVENT_V1')) {
             console.log('Meta Contact/Lead handlers already present; skipping duplicate insertion.');
@@ -67,7 +67,7 @@ jobs:
           });
           `;
             html = html.replace(orderAnchor, contact + orderAnchor);
-            const leadAnchor = "const saved=await window.submitCvmLiveOrder(order);\n    order.id=saved.order_number||order.id;";
+            const leadAnchor = "const saved=await window.submitCvmLiveOrder(order);\\n    order.id=saved.order_number||order.id;";
             if (!html.includes(leadAnchor)) throw new Error('Successful order insert anchor not found.');
             const lead = `const saved=await window.submitCvmLiveOrder(order);
             /* CVM_META_LEAD_EVENT_V1: fire only after Supabase confirms order insert */
@@ -96,3 +96,4 @@ jobs:
           fi
           git commit -m "Install Meta Pixel base code"
           git push
+# Trigger update 2026-11-01
