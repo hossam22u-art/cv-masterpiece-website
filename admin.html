@@ -24,9 +24,22 @@ const $=id=>document.getElementById(id);let cvmSupabaseClient=null,allOrders=[];
 function setError(id,msg){$(id).textContent=msg||''}
 function show(which){['setup','loginPanel','dashboard'].forEach(id=>$(id).classList.toggle('hidden',id!==which));$('logout').classList.toggle('hidden',which!=='dashboard')}
 function config(){return {url:'https://boyaotdatuquzuqolglk.supabase.co',key:'sb_publishable_ov9S-hCo_QqowNsMZaMESg_OIPL3K_y'}}
-function connect(){const c=config();if(!c.url||!c.key){show('setup');return}cvmSupabaseClient=window.supabase.createClient(c.url,c.key);show('loginPanel');cvmSupabaseClient.auth.getSession().then(({data})=>{if(data.session){show('dashboard');loadOrders()}})}
+async function enterAdminDashboard(){
+  const {data,isAdminError}=await cvmSupabaseClient.rpc('is_cvm_admin');
+  if(isAdminError||data!==true){
+    await cvmSupabaseClient.auth.signOut();
+    show('loginPanel');
+    setError('loginError','Access denied. This account is not registered as a CV Masterpiece administrator.');
+    return false;
+  }
+  setError('loginError','');
+  show('dashboard');
+  await loadOrders();
+  return true;
+}
+function connect(){const c=config();if(!c.url||!c.key){show('setup');return}cvmSupabaseClient=window.supabase.createClient(c.url,c.key);show('loginPanel');cvmSupabaseClient.auth.getSession().then(({data})=>{if(data.session){enterAdminDashboard()}})}
 $('saveConfig').onclick=()=>{const url=$('url').value.trim(),key=$('key').value.trim();if(!url.startsWith('https://')||!key){setError('setupError','Enter a valid project URL and public anon/publishable key.');return}localStorage.setItem('cvm_supabase_url',url);localStorage.setItem('cvm_supabase_key',key);connect()};
-$('loginForm').onsubmit=async e=>{e.preventDefault();setError('loginError','Signing in…');const {error}=await cvmSupabaseClient.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error){setError('loginError',error.message);return}setError('loginError','');show('dashboard');await loadOrders()};
+$('loginForm').onsubmit=async e=>{e.preventDefault();setError('loginError','Signing in…');const {error}=await cvmSupabaseClient.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error){setError('loginError',error.message);return}await enterAdminDashboard()};
 $('logout').onclick=async()=>{await cvmSupabaseClient.auth.signOut();show('loginPanel')};
 $('refresh').onclick=loadOrders;$('search').oninput=renderOrders;$('filter').onchange=renderOrders;
 async function loadOrders(){ $('message').textContent='Loading…';const {data,error}=await cvmSupabaseClient.from('orders').select('*').order('created_at',{ascending:false}).limit(500);if(error){$('message').textContent='Could not load orders: '+error.message;return}allOrders=data||[];renderOrders()}
