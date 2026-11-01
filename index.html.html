@@ -771,4 +771,46 @@ renderAll();
 </script>\n
 <style id="cvm-public-admin-preview-guard">a[href*="admin.html"],a[href*="admin-preview"],.admin-link,[data-admin-preview]{display:none!important}</style>
 <script id="cvm-public-admin-preview-guard-script">(()=>{const clean=()=>document.querySelectorAll('a,button,[role="button"]').forEach(el=>{const t=(el.textContent||'').trim().toLowerCase();const h=(el.getAttribute('href')||'').toLowerCase();if(t==='admin preview'||h.includes('admin-preview'))el.remove()});};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',clean);else clean();new MutationObserver(clean).observe(document.documentElement,{childList:true,subtree:true});})();</script>
+
+<style id="cvm-language-style">
+#cvm-language-switcher{position:fixed;top:16px;right:18px;z-index:2147483000;display:flex;gap:4px;padding:5px;background:#111;border:1px solid #b51f2b;border-radius:999px;box-shadow:0 4px 18px #0003;font-family:Arial,sans-serif}
+#cvm-language-switcher button{border:0;border-radius:999px;padding:8px 13px;background:transparent;color:#fff;font-weight:700;cursor:pointer;font-size:13px}
+#cvm-language-switcher button.active{background:#c51f32;color:#fff}
+body{padding-top:0!important}
+html[dir="rtl"] body{direction:rtl;text-align:right}
+html[dir="rtl"]{direction:rtl}
+.goog-te-banner-frame.skiptranslate{display:none!important}
+body{top:0!important}
+#google_translate_element{position:fixed;left:-9999px;top:-9999px}
+</style>
+<div id="cvm-language-switcher" aria-label="Choose language">
+  <button type="button" data-lang="ar">العربية</button>
+  <button type="button" data-lang="en" class="active">English</button>
+</div>
+<div id="google_translate_element"></div>
+<script>
+(function(){
+  var buttons=document.querySelectorAll('#cvm-language-switcher button');
+  function setDirection(lang){
+    document.documentElement.setAttribute('lang',lang);
+    document.documentElement.setAttribute('dir',lang==='ar'?'rtl':'ltr');
+    document.body.setAttribute('dir',lang==='ar'?'rtl':'ltr');
+    buttons.forEach(function(b){b.classList.toggle('active',b.getAttribute('data-lang')===lang)});
+  }
+  function translateTo(lang){
+    setDirection(lang);
+    var combo=document.querySelector('.goog-te-combo');
+    if(combo){combo.value=lang==='ar'?'ar':'en';combo.dispatchEvent(new Event('change'));}
+    try{localStorage.setItem('cvm_site_language',lang)}catch(e){}
+  }
+  buttons.forEach(function(b){b.addEventListener('click',function(){translateTo(b.getAttribute('data-lang'))})});
+  window.googleTranslateElementInit=function(){
+    new google.translate.TranslateElement({pageLanguage:'en',includedLanguages:'ar,en',autoDisplay:false},'google_translate_element');
+    var saved='en';try{saved=localStorage.getItem('cvm_site_language')||'en'}catch(e){}
+    if(saved==='ar'){setTimeout(function(){translateTo('ar')},500)}else{setDirection('en')}
+  };
+  var s=document.createElement('script');s.src='https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';s.async=true;document.head.appendChild(s);
+})();
+</script>
+
 </body></html>
