@@ -1,0 +1,47 @@
+name: Public site entry and admin preview cleanup
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/public-site-cleanup.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  cleanup:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create Vercel entry page and remove admin preview link
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const source = 'index.html.html';
+          if (!fs.existsSync(source)) throw new Error('Missing source page');
+          let html = fs.readFileSync(source, 'utf8');
+          const patterns = [
+            '<a[^>]*>[^<]*Admin\\s*preview[^<]*</a>',
+            '<button[^>]*>[^<]*Admin\\s*preview[^<]*</button>',
+            '<a[^>]*href=["\\'][^"\\']*admin(?:\\.html|-preview)[^"\\']*["\\'][^>]*>[\\s\\S]*?</a>'
+          ];
+          for (const pattern of patterns) html = html.replace(new RegExp(pattern, 'gi'), '');
+          const guard = `
+          <style id="cvm-public-admin-preview-guard">a[href*="admin.html"],a[href*="admin-preview"],.admin-link,[data-admin-preview]{display:none!important}</style>
+          <script id="cvm-public-admin-preview-guard-script">(()=>{const clean=()=>document.querySelectorAll('a,button,[role="button"]').forEach(el=>{const t=(el.textContent||'').trim().toLowerCase();const h=(el.getAttribute('href')||'').toLowerCase();if(t==='admin preview'||h.includes('admin-preview'))el.remove()});};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',clean);else clean();new MutationObserver(clean).observe(document.documentElement,{childList:true,subtree:true});})();</script>`;
+          if (!html.includes('cvm-public-admin-preview-guard-script')) {
+            const i = html.toLowerCase().lastIndexOf('</body>');
+            if (i < 0) throw new Error('Missing closing body tag');
+            html = html.slice(0, i) + guard + '\\n' + html.slice(i);
+          }
+          fs.writeFileSync(source, html);
+          fs.writeFileSync('index.html', html);
+          NODE
+      - name: Commit generated public page
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html index.html.html
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Create public index and hide admin preview"
+          git push origin main
