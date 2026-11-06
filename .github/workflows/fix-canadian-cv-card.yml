@@ -17,17 +17,14 @@ jobs:
           const fs=require('fs');
           const file='index.html.html';
           let html=fs.readFileSync(file,'utf8');
+          const bt=String.fromCharCode(96);
+          const card=bt+"<div class=\\"service-card-price\\">From ${market==='EG'?'EGP 250.00':market==='AE'?'AED 35.00':'SAR 35.00'}</div>"+bt;
+          const normal=bt+"<div class=\\"service-card-price\\">From ${formatPrice(Math.min(...vals),market)}</div>"+bt;
+          const replacement="const price=s.id==='canadian-cv'?"+card+":(vals.length?"+normal+":'');";
           const re=/const canadianFallback=s\.id==='canadian-cv'\?[\s\S]*?;const price=s\.id==='canadian-cv'\?[\s\S]*?:canadianFallback;/;
-          const replacement="const price=s.id==='canadian-cv'?\x60<div class=\\"service-card-price\\">From \x24{market==='EG'?'EGP 250.00':market==='AE'?'AED 35.00':'SAR 35.00'}</div>\x60:(vals.length?\x60<div class=\\"service-card-price\\">From \x24{formatPrice(Math.min(...vals),market)}</div>\x60:'');";
-          if (re.test(html)) {
-            html=html.replace(re,replacement);
-            fs.writeFileSync(file,html);
-            console.log('Canadian CV card now displays its price directly.');
-          } else if (html.includes("const price=s.id==='canadian-cv'?\x60<div class=\\"service-card-price\\">From \x24{market==='EG'?'EGP 250.00'")) {
-            console.log('Direct Canadian CV card price is already installed.');
-          } else {
-            throw new Error('Canadian CV card price expression not found; no source changed.');
-          }
+          if(re.test(html)){html=html.replace(re,replacement);fs.writeFileSync(file,html);console.log('Canadian CV card price replaced with direct display.');}
+          else if(html.includes(replacement)){console.log('Direct price already present.');}
+          else throw new Error('Canadian card price expression not found.');
           NODE
       - name: Commit and push
         run: |
