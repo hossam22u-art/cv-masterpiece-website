@@ -1,0 +1,53 @@
+name: Add Canadian CV prices for Egypt UAE and Saudi Arabia
+on:
+  push:
+    paths:
+      - '.github/workflows/add-canadian-cv-prices.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  update-prices:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add Canadian CV prices without changing other services
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const file = 'index.html.html';
+          let html = fs.readFileSync(file, 'utf8');
+
+          const oldService = /("id":"canadian-cv","name":"Canadian CV \/ Resume","category":"CV Studio","icon":"▥","description":"A resume adapted to Canadian application conventions\.","languages":\["English","French","Other languages"\],"options":\["One language"\],"prices":)\{\}/;
+          const newPrices = '{"EG|English|One language":250,"EG|French|One language":350,"EG|Other languages|One language":350,"SA|English|One language":35,"SA|French|One language":45,"SA|Other languages|One language":45}';
+          if (oldService.test(html)) {
+            html = html.replace(oldService, '$1' + newPrices);
+            console.log('Added Canadian CV base prices.');
+          } else if (html.includes('"id":"canadian-cv"') && html.includes('"EG|English|One language":250') && html.includes('"SA|Other languages|One language":45')) {
+            console.log('Canadian CV prices already present.');
+          } else {
+            throw new Error('Could not safely locate the Canadian CV service price object. No changes made.');
+          }
+
+          const oldOverride = "if(h==='Canadian CV / Resume')price.textContent='Request a quote';";
+          const newOverride = "if(h==='Canadian CV / Resume')price.textContent=market==='EG'?'English 250 EGP · French / Other languages 350 EGP':market==='AE'?'English 35 AED · French / Other languages 45 AED':'English 35 SAR · French / Other languages 45 SAR';";
+          if (html.includes(oldOverride)) {
+            html = html.replace(oldOverride, newOverride);
+            console.log('Updated Canadian CV card price display.');
+          } else if (!html.includes("if(h==='Canadian CV / Resume')price.textContent=market==='EG'")) {
+            throw new Error('Could not safely locate the Canadian CV display override. No changes made.');
+          }
+
+          fs.writeFileSync(file, html);
+          console.log('Canadian CV prices updated successfully.');
+          NODE
+      - name: Remove temporary inspection workflows
+        run: |
+          rm -f .github/workflows/inspect-cv-pricing.yml .github/workflows/inspect-cv-pricing-logic.yml .github/workflows/inspect-canadian-override.yml
+      - name: Commit and push website update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html.html .github/workflows
+          git commit -m "Add Canadian CV prices for EG AE and SA"
+          git push
