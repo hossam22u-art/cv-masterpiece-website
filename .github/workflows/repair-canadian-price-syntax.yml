@@ -1,0 +1,39 @@
+name: Repair Canadian CV pricing script syntax
+on:
+  push:
+    paths:
+      - '.github/workflows/repair-canadian-price-syntax.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Repair duplicated function declaration
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const file = 'index.html.html';
+          let html = fs.readFileSync(file, 'utf8');
+          const broken = 'function formatPricefunction formatPrice(';
+          const fixed = 'function formatPrice(';
+          if (html.includes(broken)) {
+            html = html.replace(broken, fixed);
+            console.log('Repaired the JavaScript syntax error.');
+          } else if (html.includes(fixed)) {
+            console.log('The duplicated declaration is not present.');
+          } else {
+            throw new Error('Could not locate the expected price formatter declaration.');
+          }
+          new Function(html.match(/<script>([\\s\\S]*?)<\\/script>/i)?.[1] || (() => { throw new Error('Main script tag not found'); })());
+          fs.writeFileSync(file, html);
+          NODE
+      - name: Commit repair
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html.html
+          git commit -m "Repair pricing script syntax error"
+          git push
