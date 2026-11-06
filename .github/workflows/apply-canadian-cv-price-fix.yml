@@ -1,0 +1,33 @@
+name: Apply Canadian CV price fix
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-canadian-cv-price-fix.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch order price calculator
+        run: |
+          node <<'NODE'
+          const fs=require('fs');const file='index.html.html';let h=fs.readFileSync(file,'utf8');
+          const re=/return null;?\s*}\s*function formatPrice\(v,country\)/;
+          const fallback="if(serviceId==='canadian-cv'){const marketPrices={EG:{English:250,French:350,'Other languages':350},AE:{English:35,French:45,'Other languages':45},SA:{English:35,French:45,'Other languages':45}};const fallback=marketPrices[country]?.[language];if(fallback!==undefined)return fallback}return null} function formatPrice(v,country)";
+          if(h.includes("marketPrices={EG:{English:250")){console.log('Already patched');}
+          else if(re.test(h)){h=h.replace(re,fallback);console.log('Patched Canadian CV order price lookup');}
+          else throw new Error('Price function boundary not found');
+          fs.writeFileSync(file,h);
+          NODE
+      - name: Remove temporary workflows
+        run: rm -f .github/workflows/inspect-order-modal-price.yml .github/workflows/inspect-canadian-card.yml .github/workflows/fix-canadian-order-pricing.yml
+      - name: Commit and push
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html.html .github/workflows
+          git commit -m 'Apply Canadian CV order pricing fix'
+          git push
