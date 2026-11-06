@@ -1,0 +1,45 @@
+name: Fix Canadian CV price in order modal and submitted order
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/fix-canadian-order-modal-price-live.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add Canadian CV pricing to the live order price calculator
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const file='index.html';
+          let html=fs.readFileSync(file,'utf8');
+          const marker='cvm-canadian-order-price-live-v1';
+          if(!html.includes(marker)){
+            const re=/function getPrice\\(serviceId,country,language,option\\)\\{/;
+            if(!re.test(html)) throw new Error('Could not locate live getPrice() function in index.html; no changes made.');
+            html=html.replace(re,match=>match+`
+            /* ${marker}: Canadian CV approved market prices */
+            if(serviceId==='canadian-cv'){
+              const marketPrices={EG:{English:250},AE:{English:35},SA:{English:35}};
+              const otherPrices={EG:350,AE:45,SA:45};
+              if(marketPrices[country] && Object.prototype.hasOwnProperty.call(marketPrices[country],language)) return marketPrices[country][language];
+              if(['EG','AE','SA'].includes(country)) return otherPrices[country];
+              return null;
+            }
+            `);
+          }
+          const start=html.indexOf('function getPrice(serviceId,country,language,option){');
+          if(start<0 || !html.slice(start,start+1200).includes(marker)) throw new Error('Canadian price guard validation failed.');
+          fs.writeFileSync(file,html);
+          console.log('Canadian CV order modal and order submission now use EG/AE/SA price map.');
+          NODE
+      - name: Commit and push live order calculator fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then echo 'No changes'; else git commit -m 'Fix Canadian CV order modal pricing'; git push; fi
