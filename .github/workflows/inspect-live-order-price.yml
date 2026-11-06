@@ -1,0 +1,22 @@
+name: Inspect live Canadian CV order price logic
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/inspect-live-order-price.yml'
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect actual deployed HTML order form logic
+        run: |
+          node <<'NODE'
+          const fs=require('fs'); const h=fs.readFileSync('index.html','utf8');
+          for(const term of ['function updatePrice','updatePrice =','function formatPrice','orderService','Estimated price','Request a quote','orderLanguage','orderMarket']){
+            console.log('\\n===== '+term+' ====='); let p=-1,n=0;
+            while((p=h.indexOf(term,p+1))>=0&&n<8){console.log('--- '+(++n)+' @'+p+' ---');console.log(h.slice(Math.max(0,p-350),Math.min(h.length,p+850)).replace(/\\s+/g,' '));}
+          }
+          NODE
