@@ -1,0 +1,27 @@
+name: Inspect Canadian CV live entry files
+on:
+  push:
+    paths:
+      - '.github/workflows/inspect-canadian-live-entry.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare deployed entry candidates
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          for (const file of ['index.html', 'index.html.html']) {
+            const html = fs.readFileSync(file, 'utf8');
+            console.log('FILE', file, 'bytes', html.length);
+            for (const term of ['Canadian CV / Resume','function getPrice','service-card-price','cvm-canadian-card-price-only']) {
+              const at = html.indexOf(term);
+              console.log('TERM', term, 'AT', at);
+              if (at >= 0) console.log(html.slice(Math.max(0, at-450), Math.min(html.length, at+1000)));
+            }
+          }
+          NODE
