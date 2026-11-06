@@ -1,0 +1,18 @@
+name: Inspect Canadian CV order price flow
+on:
+  push:
+    paths:
+      - '.github/workflows/inspect-canadian-order-flow.yml'
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect order modal and service price rendering
+        run: |
+          node <<'NODE'
+          const fs=require('fs');const h=fs.readFileSync('index.html.html','utf8');
+          const needles=['function updateOrder','function calculateOrder','function renderOrder','getPrice(','selectedService','estimatedPrice','orderService','orderLanguage','Request a quote','cvm_v2_db'];
+          for(const needle of needles){let i=h.indexOf(needle);console.log('\n### '+needle+' @ '+i);if(i>=0)console.log(h.slice(Math.max(0,i-500),Math.min(h.length,i+2400)));}
+          NODE
