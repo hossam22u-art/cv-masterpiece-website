@@ -1,0 +1,40 @@
+name: Force Canadian CV price on service card
+on:
+  push:
+    paths:
+      - '.github/workflows/force-canadian-cv-card-price.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure Canadian CV always displays its starting price
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const file='index.html.html';
+          let html=fs.readFileSync(file,'utf8');
+          const old="const price=vals.length?\u0060<div class=\"service-card-price\">From \u0024{formatPrice(Math.min(...vals),market)}</div>\u0060:canadianFallback;";
+          const replacement="const price=s.id==='canadian-cv'?\u0060<div class=\"service-card-price\">From \u0024{formatPrice(market==='EG'?250:market==='AE'?35:35,market)}</div>\u0060:(vals.length?\u0060<div class=\"service-card-price\">From \u0024{formatPrice(Math.min(...vals),market)}</div>\u0060:canadianFallback);";
+          if(html.includes(old)){
+            html=html.replace(old,replacement);
+            console.log('Canadian CV service card now always displays its approved starting price.');
+          } else if(html.includes("const price=s.id==='canadian-cv'?")){
+            console.log('Canadian CV card price is already explicitly enforced.');
+          } else {
+            throw new Error('Could not locate the exact service-card price expression; no website source changed.');
+          }
+          fs.writeFileSync(file,html);
+          NODE
+      - name: Remove temporary inspection workflow
+        run: rm -f .github/workflows/inspect-canadian-card-markup.yml
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html.html .github/workflows
+          git commit -m "Ensure Canadian CV service card displays starting price"
+          git push
