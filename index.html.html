@@ -879,7 +879,7 @@ body{top:0!important}
         if (button) card.insertBefore(price, button);
         else card.appendChild(price);
       }
-      price.textContent = label;
+      if (price.textContent !== label) price.textContent = label;
     });
   }
   addPrice();
