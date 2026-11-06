@@ -830,4 +830,35 @@ body{top:0!important}
   var s=document.createElement('script');s.src='https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';s.async=true;document.head.appendChild(s);
 })();
 </script>
-\n</body></html>
+\n<script id="cvm-canadian-cv-pricing-fix-v2">
+(function () {
+  const prices = {
+    'EG|English|One language': 250,
+    'EG|French|One language': 350,
+    'EG|Other languages|One language': 350,
+    'SA|English|One language': 35,
+    'SA|French|One language': 45,
+    'SA|Other languages|One language': 45,
+    'AE|English|One language': 35,
+    'AE|French|One language': 45,
+    'AE|Other languages|One language': 45
+  };
+  function applyCanadianPrices() {
+    if (typeof db === 'undefined' || !Array.isArray(db.services)) return;
+    const service = db.services.find(item => item.id === 'canadian-cv');
+    if (!service) return;
+    service.prices = service.prices || {};
+    Object.assign(service.prices, prices);
+    if (typeof saveDB === 'function') saveDB();
+    if (typeof renderServices === 'function') renderServices();
+    if (typeof renderCVStudio === 'function') renderCVStudio();
+    const orderService = document.getElementById('orderService');
+    if (orderService && orderService.value === 'canadian-cv' && typeof updatePrice === 'function') updatePrice();
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyCanadianPrices, { once: true });
+  } else {
+    applyCanadianPrices();
+  }
+})();
+</script>\n</body></html>
