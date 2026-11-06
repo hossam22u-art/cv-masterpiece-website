@@ -17,16 +17,15 @@ jobs:
           const fs = require('fs');
           const file = 'index.html.html';
           let html = fs.readFileSync(file, 'utf8');
-          const oldLine = '                price.textContent = label;';
-          const newLine = '                if (price.textContent !== label) price.textContent = label;';
-          if (html.includes(oldLine)) {
-            html = html.replace(oldLine, newLine);
+          const re = /(\s*)price\.textContent\s*=\s*label\s*;/;
+          if (re.test(html)) {
+            html = html.replace(re, '$1if (price.textContent !== label) price.textContent = label;');
             fs.writeFileSync(file, html);
             console.log('Stable price update installed.');
-          } else if (html.includes(newLine)) {
+          } else if (html.includes('if (price.textContent !== label) price.textContent = label;')) {
             console.log('Stable price update already installed.');
           } else {
-            throw new Error('Price assignment not found.');
+            throw new Error('Could not locate price assignment.');
           }
           NODE
       - name: Commit and push
