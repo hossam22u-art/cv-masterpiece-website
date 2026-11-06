@@ -1,4 +1,4 @@
-name: Show Canadian CV card price only
+name: Add Canadian CV card starting price
 on:
   push:
     paths:
@@ -11,24 +11,53 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Replace Canadian card price with direct display
+      - name: Add a small card-only price patch
         run: |
           node <<'NODE'
-          const fs=require('fs');
-          const file='index.html.html';
-          let html=fs.readFileSync(file,'utf8');
-          const bt=String.fromCharCode(96);
-          const card=bt+"<div class='service-card-price'>From ${market==='EG'?'EGP 250.00':market==='AE'?'AED 35.00':'SAR 35.00'}</div>"+bt;
-          const normal=bt+"<div class='service-card-price'>From ${formatPrice(Math.min(...vals),market)}</div>"+bt;
-          const replacement="const price=s.id==='canadian-cv'?"+card+":(vals.length?"+normal+":'');";
-          const re=/const canadianFallback=s\.id==='canadian-cv'\?[\s\S]*?;const price=s\.id==='canadian-cv'\?[\s\S]*?:canadianFallback;/;
-          if(re.test(html)){html=html.replace(re,replacement);fs.writeFileSync(file,html);console.log('Canadian CV card price replaced with direct display.');}
-          else if(html.includes(replacement)){console.log('Direct price already present.');}
-          else throw new Error('Canadian card price expression not found.');
+          const fs = require('fs');
+          const file = 'index.html.html';
+          let html = fs.readFileSync(file, 'utf8');
+          const marker = '<script id="cvm-canadian-card-price-only">';
+          if (!html.includes(marker)) {
+            const patch = marker + String.raw`
+          (function () {
+            function addPrice() {
+              var market = document.getElementById('countrySelect');
+              var country = market ? market.value : 'EG';
+              var label = country === 'EG' ? 'From EGP 250.00' :
+                          country === 'AE' ? 'From AED 35.00' : 'From SAR 35.00';
+              document.querySelectorAll('.service-card').forEach(function (card) {
+                var heading = card.querySelector('h3');
+                if (!heading || !heading.textContent.toLowerCase().includes('canadian cv')) return;
+                var price = card.querySelector('.service-card-price');
+                if (!price) {
+                  price = document.createElement('div');
+                  price.className = 'service-card-price';
+                  var button = card.querySelector('button');
+                  if (button) card.insertBefore(price, button);
+                  else card.appendChild(price);
+                }
+                price.textContent = label;
+              });
+            }
+            addPrice();
+            var observer = new MutationObserver(addPrice);
+            observer.observe(document.documentElement, { childList: true, subtree: true });
+            var market = document.getElementById('countrySelect');
+            if (market) market.addEventListener('change', addPrice);
+          })();
+          </script>`;
+            const close = html.toLowerCase().lastIndexOf('</body>');
+            html = close >= 0 ? html.slice(0, close) + patch + html.slice(close) : html + patch;
+            fs.writeFileSync(file, html);
+            console.log('Added Canadian CV card-only price patch.');
+          } else {
+            console.log('Canadian CV card-only price patch already exists.');
+          }
           NODE
       - name: Commit and push
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html.html
-          if git diff --cached --quiet; then echo 'No changes to commit.'; else git commit -m 'Display Canadian CV card price directly' && git push; fi
+          if git diff --cached --quiet; then echo 'No changes to commit.'; else git commit -m 'Show Canadian CV starting price on service card' && git push; fi
