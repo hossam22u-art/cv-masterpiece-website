@@ -1,4 +1,4 @@
-name: Fix Canadian CV service card price display
+name: Force Canadian CV card starting price
 on:
   push:
     paths:
@@ -11,23 +11,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Add explicit Canadian CV card price fallback
+      - name: Force price directly on Canadian CV service card
         run: |
           node <<'NODE'
-          const fs=require('fs'); const file='index.html.html'; let h=fs.readFileSync(file,'utf8');
-          const old="const price=vals.length?`<div class=\"service-card-price\">From ${formatPrice(Math.min(...vals),market)}</div>`:'';";
-          const replacement="const canadianFallback=s.id==='canadian-cv'?`<div class=\"service-card-price\">From ${formatPrice(market==='EG'?250:market==='AE'?35:35,market)}</div>`:'';const price=vals.length?`<div class=\"service-card-price\">From ${formatPrice(Math.min(...vals),market)}</div>`:canadianFallback;";
-          if(h.includes(old)){h=h.replace(old,replacement);console.log('Added Canadian CV card fallback.');}
-          else if(h.includes('const canadianFallback=s.id===\'canadian-cv\'')){console.log('Fallback already exists.');}
-          else throw new Error('Could not safely find service card price renderer; no change made.');
-          fs.writeFileSync(file,h);
+          const fs = require('fs');
+          const file = 'index.html.html';
+          let html = fs.readFileSync(file, 'utf8');
+          const old = "const canadianFallback=s.id==='canadian-cv'?\x60<div class=\\\"service-card-price\\\">From \x24{formatPrice(market==='EG'?250:market==='AE'?35:35,market)}</div>\x60:'';const price=vals.length?\x60<div class=\\\"service-card-price\\\">From \x24{formatPrice(Math.min(...vals),market)}</div>\x60:canadianFallback;";
+          const replacement = "const price=s.id==='canadian-cv'?\x60<div class=\\\"service-card-price\\\">From \x24{formatPrice(market==='EG'?250:market==='AE'?35:35,market)}</div>\x60:vals.length?\x60<div class=\\\"service-card-price\\\">From \x24{formatPrice(Math.min(...vals),market)}</div>\x60:'';";
+          if (html.includes(replacement)) {
+            console.log('Canadian CV card already uses the forced starting price.');
+          } else if (html.includes(old)) {
+            html = html.replace(old, replacement);
+            console.log('Canadian CV card now always renders its starting price.');
+          } else {
+            const simpleOld = "const price=vals.length?\x60<div class=\\\"service-card-price\\\">From \x24{formatPrice(Math.min(...vals),market)}</div>\x60:'';";
+            const simpleReplacement = "const price=s.id==='canadian-cv'?\x60<div class=\\\"service-card-price\\\">From \x24{formatPrice(market==='EG'?250:market==='AE'?35:35,market)}</div>\x60:vals.length?\x60<div class=\\\"service-card-price\\\">From \x24{formatPrice(Math.min(...vals),market)}</div>\x60:'';";
+            if (html.includes(simpleOld)) html = html.replace(simpleOld, simpleReplacement);
+            else throw new Error('Could not safely locate Canadian CV card price renderer. No changes made.');
+          }
+          fs.writeFileSync(file, html);
           NODE
-      - name: Remove temporary inspection workflow
-        run: rm -f .github/workflows/inspect-canadian-card.yml
       - name: Commit website fix
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add index.html.html .github/workflows
-          git commit -m 'Fix Canadian CV card price display'
-          git push
+          git add index.html.html
+          if git diff --cached --quiet; then echo 'No changes to commit.'; else git commit -m 'Force Canadian CV card starting price' && git push; fi
