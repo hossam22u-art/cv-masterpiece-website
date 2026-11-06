@@ -22,6 +22,43 @@
 <script>
 const $=id=>document.getElementById(id);let cvmSupabaseClient=null,allOrders=[];
 function setError(id,msg){$(id).textContent=msg||''}
+async function retryMetaPurchase(order,button){
+  const original=button.textContent;
+  button.disabled=true;
+  button.textContent='Sending Purchase…';
+  try{
+    const {data:sessionData}=await cvmSupabaseClient.auth.getSession();
+    if(!sessionData?.session?.access_token){
+      alert('Admin session expired. Please sign in again.');
+      return;
+    }
+    const {data,eventError}=await cvmSupabaseClient.functions.invoke('meta-purchase',{body:{order_id:order.id}});
+    if(eventError||data?.error){
+      console.error('Meta Purchase retry error',eventError||data);
+      alert('Purchase event was not confirmed: '+(data?.error||eventError?.message||'unknown error'));
+      return;
+    }
+    if(data?.warning){
+      alert('Meta accepted the event, but the order could not be marked as sent. The same event ID will be reused if retried. Check Meta Events Manager before another attempt.');
+      return;
+    }
+    if(data?.already_sent){
+      order.meta_purchase_sent_at=order.meta_purchase_sent_at||new Date().toISOString();
+      alert('This order already has a recorded Purchase event.');
+    }else{
+      order.meta_purchase_sent_at=new Date().toISOString();
+      order.meta_purchase_event_id=data?.event_id||('cvm-purchase-'+order.id);
+      alert('Meta Purchase event accepted successfully.');
+    }
+  }catch(error){
+    console.error('Meta Purchase retry failed',error);
+    alert('Could not call the Meta Purchase function: '+(error?.message||'unknown error'));
+  }finally{
+    button.disabled=false;
+    button.textContent=original;
+    renderOrders();
+  }
+}
 function show(which){['setup','loginPanel','dashboard'].forEach(id=>$(id).classList.toggle('hidden',id!==which));$('logout').classList.toggle('hidden',which!=='dashboard')}
 function config(){return {url:'https://boyaotdatuquzuqolglk.supabase.co',key:'sb_publishable_ov9S-hCo_QqowNsMZaMESg_OIPL3K_y'}}
 async function enterAdminDashboard(){
@@ -105,7 +142,15 @@ function renderOrders(){
       proofBtn.onclick=async()=>{proofBtn.disabled=true;try{let path=proofPath.replace(/^payment-proofs\//,'').replace(/^\//,'');if(/^https?:\/\//i.test(path)){window.open(path,'_blank','noopener');return}const {data,error}=await cvmSupabaseClient.storage.from('payment-proofs').createSignedUrl(path,300);if(error||!data?.signedUrl)throw error||new Error('Could not create image link');window.open(data.signedUrl,'_blank','noopener')}catch(e){alert('Could not open payment proof: '+(e?.message||'unknown error'))}finally{proofBtn.disabled=false}};
       proofTd.appendChild(proofBtn);
       const actions=document.createElement('div');actions.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-top:8px';
-      const approve=document.createElement('button');approve.textContent='Confirm payment';approve.disabled=paymentStatus==='Approved';approve.onclick=()=>setPaymentStatus(o,'Approved');actions.appendChild(approve);
+      if(paymentStatus==='Approved'){
+        if(o.meta_purchase_sent_at){
+          const sent=document.createElement('div');sent.className='muted';sent.textContent='Meta Purchase: sent';actions.appendChild(sent);
+        }else{
+          const retry=document.createElement('button');retry.textContent='Retry Meta Purchase';retry.className='secondary';retry.onclick=()=>retryMetaPurchase(o,retry);actions.appendChild(retry);
+        }
+      }else{
+        const approve=document.createElement('button');approve.textContent='Confirm payment';approve.onclick=()=>setPaymentStatus(o,'Approved');actions.appendChild(approve);
+      }
       const reject=document.createElement('button');reject.className='secondary';reject.textContent='Reject';reject.disabled=paymentStatus==='Rejected';reject.onclick=()=>setPaymentStatus(o,'Rejected');actions.appendChild(reject);
       proofTd.appendChild(actions);
       if(o.payment_rejection_reason){const note=document.createElement('div');note.className='muted';note.textContent='Reason: '+o.payment_rejection_reason;proofTd.appendChild(note)}
