@@ -1,0 +1,20 @@
+name: Inspect CV pricing logic
+on:
+  push:
+    paths:
+      - '.github/workflows/inspect-cv-pricing-logic.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect data and pricing logic
+        run: |
+          node <<'NODE'
+          const fs=require('fs'); const h=fs.readFileSync('index.html.html','utf8');
+          const terms=['const db','let db','db.services=','orderService.addEventListener','orderLanguage','orderOption','function updateOrder','function calculate','service.prices','renderCVStudio'];
+          for(const term of terms){const i=h.indexOf(term);if(i>=0)console.log('\n### '+term+' @'+i+'\n'+h.slice(Math.max(0,i-350),Math.min(h.length,i+1800)).replace(/\s+/g,' '));}
+          NODE
