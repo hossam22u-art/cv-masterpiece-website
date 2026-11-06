@@ -11,33 +11,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Add Canadian CV pricing to the live order price calculator
+      - name: Patch the live order price lookup only for Canadian CV
         run: |
           node <<'NODE'
-          const fs=require('fs');
-          const file='index.html';
-          let html=fs.readFileSync(file,'utf8');
+          const fs=require('fs');const file='index.html';let html=fs.readFileSync(file,'utf8');
           const marker='cvm-canadian-order-price-live-v1';
+          const anchor='const s=db.services.find(x=>x.id===serviceId);if(!s)return null;const keys=';
           if(!html.includes(marker)){
-            const re=/function getPrice\\(serviceId,country,language,option\\)\\{/;
-            if(!re.test(html)) throw new Error('Could not locate live getPrice() function in index.html; no changes made.');
-            html=html.replace(re,match=>match+`
-            /* ${marker}: Canadian CV approved market prices */
-            if(serviceId==='canadian-cv'){
-              const marketPrices={EG:{English:250},AE:{English:35},SA:{English:35}};
-              const otherPrices={EG:350,AE:45,SA:45};
-              if(marketPrices[country] && Object.prototype.hasOwnProperty.call(marketPrices[country],language)) return marketPrices[country][language];
-              if(['EG','AE','SA'].includes(country)) return otherPrices[country];
-              return null;
-            }
-            `);
+            const count=html.split(anchor).length-1;
+            if(count!==1) throw new Error('Expected exactly one live order price lookup anchor; found '+count+'. No change made.');
+            const guard=`/* ${marker} */
+          if(serviceId==='canadian-cv'){
+            const english={EG:250,AE:35,SA:35};
+            const other={EG:350,AE:45,SA:45};
+            if(['EG','AE','SA'].includes(country)) return language==='English'?english[country]:other[country];
+            return null;
           }
-          const start=html.indexOf('function getPrice(serviceId,country,language,option){');
-          if(start<0 || !html.slice(start,start+1200).includes(marker)) throw new Error('Canadian price guard validation failed.');
-          fs.writeFileSync(file,html);
-          console.log('Canadian CV order modal and order submission now use EG/AE/SA price map.');
+          `;
+            html=html.replace(anchor,guard+anchor);
+          }
+          if(!html.includes(marker)) throw new Error('Canadian order price patch validation failed.');
+          fs.writeFileSync(file,html);console.log('Live Canadian CV order price lookup patched and validated.');
           NODE
-      - name: Commit and push live order calculator fix
+      - name: Commit and push
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
