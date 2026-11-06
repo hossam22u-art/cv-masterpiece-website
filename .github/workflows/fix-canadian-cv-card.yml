@@ -1,4 +1,4 @@
-name: Force Canadian CV card starting price
+name: Show Canadian CV card price only
 on:
   push:
     paths:
@@ -11,30 +11,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Force price directly on Canadian CV service card
+      - name: Replace Canadian card price with direct display
         run: |
           node <<'NODE'
-          const fs = require('fs');
-          const file = 'index.html.html';
-          let html = fs.readFileSync(file, 'utf8');
-          const old = "const canadianFallback=s.id==='canadian-cv'?\x60<div class=\\\"service-card-price\\\">From \x24{formatPrice(market==='EG'?250:market==='AE'?35:35,market)}</div>\x60:'';const price=vals.length?\x60<div class=\\\"service-card-price\\\">From \x24{formatPrice(Math.min(...vals),market)}</div>\x60:canadianFallback;";
-          const replacement = "const price=s.id==='canadian-cv'?\x60<div class=\\\"service-card-price\\\">From \x24{formatPrice(market==='EG'?250:market==='AE'?35:35,market)}</div>\x60:vals.length?\x60<div class=\\\"service-card-price\\\">From \x24{formatPrice(Math.min(...vals),market)}</div>\x60:'';";
-          if (html.includes(replacement)) {
-            console.log('Canadian CV card already uses the forced starting price.');
-          } else if (html.includes(old)) {
-            html = html.replace(old, replacement);
-            console.log('Canadian CV card now always renders its starting price.');
+          const fs=require('fs');
+          const file='index.html.html';
+          let html=fs.readFileSync(file,'utf8');
+          const re=/const canadianFallback=s\.id==='canadian-cv'\?[\s\S]*?;const price=s\.id==='canadian-cv'\?[\s\S]*?:canadianFallback;/;
+          const replacement="const price=s.id==='canadian-cv'?\x60<div class=\\"service-card-price\\">From \x24{market==='EG'?'EGP 250.00':market==='AE'?'AED 35.00':'SAR 35.00'}</div>\x60:(vals.length?\x60<div class=\\"service-card-price\\">From \x24{formatPrice(Math.min(...vals),market)}</div>\x60:'');";
+          if (re.test(html)) {
+            html=html.replace(re,replacement);
+            fs.writeFileSync(file,html);
+            console.log('Canadian CV card now displays its price directly.');
+          } else if (html.includes("const price=s.id==='canadian-cv'?\x60<div class=\\"service-card-price\\">From \x24{market==='EG'?'EGP 250.00'")) {
+            console.log('Direct Canadian CV card price is already installed.');
           } else {
-            const simpleOld = "const price=vals.length?\x60<div class=\\\"service-card-price\\\">From \x24{formatPrice(Math.min(...vals),market)}</div>\x60:'';";
-            const simpleReplacement = "const price=s.id==='canadian-cv'?\x60<div class=\\\"service-card-price\\\">From \x24{formatPrice(market==='EG'?250:market==='AE'?35:35,market)}</div>\x60:vals.length?\x60<div class=\\\"service-card-price\\\">From \x24{formatPrice(Math.min(...vals),market)}</div>\x60:'';";
-            if (html.includes(simpleOld)) html = html.replace(simpleOld, simpleReplacement);
-            else throw new Error('Could not safely locate Canadian CV card price renderer. No changes made.');
+            throw new Error('Canadian CV card price expression not found; no source changed.');
           }
-          fs.writeFileSync(file, html);
           NODE
-      - name: Commit website fix
+      - name: Commit and push
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html.html
-          if git diff --cached --quiet; then echo 'No changes to commit.'; else git commit -m 'Force Canadian CV card starting price' && git push; fi
+          if git diff --cached --quiet; then echo 'No changes to commit.'; else git commit -m 'Display Canadian CV card price directly' && git push; fi
