@@ -1,0 +1,37 @@
+name: Stabilize Canadian CV card price
+on:
+  push:
+    paths:
+      - '.github/workflows/stabilize-canadian-card-price.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prevent repeated price DOM updates
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const file = 'index.html.html';
+          let html = fs.readFileSync(file, 'utf8');
+          const oldLine = '                price.textContent = label;';
+          const newLine = '                if (price.textContent !== label) price.textContent = label;';
+          if (html.includes(oldLine)) {
+            html = html.replace(oldLine, newLine);
+            fs.writeFileSync(file, html);
+            console.log('Stable price update installed.');
+          } else if (html.includes(newLine)) {
+            console.log('Stable price update already installed.');
+          } else {
+            throw new Error('Price assignment not found.');
+          }
+          NODE
+      - name: Commit and push
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html.html
+          if git diff --cached --quiet; then echo 'No changes.'; else git commit -m 'Stabilize Canadian CV card price update' && git push; fi
