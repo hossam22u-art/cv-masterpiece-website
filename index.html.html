@@ -861,4 +861,31 @@ body{top:0!important}
     applyCanadianPrices();
   }
 })();
-</script>\n</body></html>
+</script>\n<script id="cvm-canadian-card-price-only">
+(function () {
+  function addPrice() {
+    var market = document.getElementById('countrySelect');
+    var country = market ? market.value : 'EG';
+    var label = country === 'EG' ? 'From EGP 250.00' :
+                country === 'AE' ? 'From AED 35.00' : 'From SAR 35.00';
+    document.querySelectorAll('.service-card').forEach(function (card) {
+      var heading = card.querySelector('h3');
+      if (!heading || !heading.textContent.toLowerCase().includes('canadian cv')) return;
+      var price = card.querySelector('.service-card-price');
+      if (!price) {
+        price = document.createElement('div');
+        price.className = 'service-card-price';
+        var button = card.querySelector('button');
+        if (button) card.insertBefore(price, button);
+        else card.appendChild(price);
+      }
+      price.textContent = label;
+    });
+  }
+  addPrice();
+  var observer = new MutationObserver(addPrice);
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+  var market = document.getElementById('countrySelect');
+  if (market) market.addEventListener('change', addPrice);
+})();
+</script></body></html>
