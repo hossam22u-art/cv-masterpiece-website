@@ -1,0 +1,33 @@
+name: Fix Canadian CV service card price display
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-canadian-cv-card.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add explicit Canadian CV card price fallback
+        run: |
+          node <<'NODE'
+          const fs=require('fs'); const file='index.html.html'; let h=fs.readFileSync(file,'utf8');
+          const old="const price=vals.length?`<div class=\"service-card-price\">From ${formatPrice(Math.min(...vals),market)}</div>`:'';";
+          const replacement="const canadianFallback=s.id==='canadian-cv'?`<div class=\"service-card-price\">From ${formatPrice(market==='EG'?250:market==='AE'?35:35,market)}</div>`:'';const price=vals.length?`<div class=\"service-card-price\">From ${formatPrice(Math.min(...vals),market)}</div>`:canadianFallback;";
+          if(h.includes(old)){h=h.replace(old,replacement);console.log('Added Canadian CV card fallback.');}
+          else if(h.includes('const canadianFallback=s.id===\'canadian-cv\'')){console.log('Fallback already exists.');}
+          else throw new Error('Could not safely find service card price renderer; no change made.');
+          fs.writeFileSync(file,h);
+          NODE
+      - name: Remove temporary inspection workflow
+        run: rm -f .github/workflows/inspect-canadian-card.yml
+      - name: Commit website fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html.html .github/workflows
+          git commit -m 'Fix Canadian CV card price display'
+          git push
