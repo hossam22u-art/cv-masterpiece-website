@@ -1,0 +1,77 @@
+name: Finalize Canadian CV pricing migration
+on:
+  push:
+    paths:
+      - '.github/workflows/finalize-canadian-cv-pricing.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apply-pricing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Insert and validate Canadian CV price migration
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const file = 'index.html.html';
+          let html = fs.readFileSync(file, 'utf8');
+          const marker = 'cvm-canadian-cv-pricing-fix-v2';
+          if (!html.includes(marker)) {
+            const script = `<script id="${marker}">
+          (function () {
+            const prices = {
+              'EG|English|One language': 250,
+              'EG|French|One language': 350,
+              'EG|Other languages|One language': 350,
+              'SA|English|One language': 35,
+              'SA|French|One language': 45,
+              'SA|Other languages|One language': 45,
+              'AE|English|One language': 35,
+              'AE|French|One language': 45,
+              'AE|Other languages|One language': 45
+            };
+            function applyCanadianPrices() {
+              if (typeof db === 'undefined' || !Array.isArray(db.services)) return;
+              const service = db.services.find(item => item.id === 'canadian-cv');
+              if (!service) return;
+              service.prices = service.prices || {};
+              Object.assign(service.prices, prices);
+              if (typeof saveDB === 'function') saveDB();
+              if (typeof renderServices === 'function') renderServices();
+              if (typeof renderCVStudio === 'function') renderCVStudio();
+              const orderService = document.getElementById('orderService');
+              if (orderService && orderService.value === 'canadian-cv' && typeof updatePrice === 'function') updatePrice();
+            }
+            if (document.readyState === 'loading') {
+              document.addEventListener('DOMContentLoaded', applyCanadianPrices, { once: true });
+            } else {
+              applyCanadianPrices();
+            }
+          })();
+          </script>`;
+            const bodyClose = html.toLowerCase().lastIndexOf('</body>');
+            if (bodyClose < 0) throw new Error('Could not find </body>; no change made.');
+            html = html.slice(0, bodyClose) + script + '\\n' + html.slice(bodyClose);
+          }
+          const open = html.indexOf('<script id="' + marker + '">');
+          if (open < 0) throw new Error('Pricing migration opening tag missing.');
+          const contentStart = html.indexOf('>', open) + 1;
+          const close = html.indexOf('</script>', contentStart);
+          if (close < 0) throw new Error('Pricing migration closing tag missing.');
+          new Function(html.slice(contentStart, close));
+          fs.writeFileSync(file, html);
+          console.log('Canadian CV pricing migration inserted and syntax validated.');
+          NODE
+      - name: Commit website change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html.html
+          if git diff --cached --quiet; then
+            echo "No source changes to commit."
+          else
+            git commit -m "Apply Canadian CV prices to website data"
+            git push
+          fi
