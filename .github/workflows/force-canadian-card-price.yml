@@ -1,0 +1,63 @@
+name: Force Canadian CV card price in production homepage
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/force-canadian-card-price.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Insert a persistent visible price into the Canadian CV card
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const file='index.html';
+          let html=fs.readFileSync(file,'utf8');
+          const marker='id="cvm-force-canadian-price-live"';
+          if(!html.includes(marker)){
+            const script=`<script id="cvm-force-canadian-price-live">
+          (function(){
+            function forceCanadianPrice(){
+              var countrySelect=document.getElementById('countrySelect');
+              var country=countrySelect && countrySelect.value ? countrySelect.value : 'EG';
+              var label=country==='EG'?'From EGP 250.00':country==='AE'?'From AED 35.00':'From SAR 35.00';
+              document.querySelectorAll('.service-card').forEach(function(card){
+                var heading=card.querySelector('h3');
+                if(!heading || !/canadian\\s+cv/i.test(heading.textContent)) return;
+                var price=card.querySelector('.service-card-price');
+                if(!price){
+                  price=document.createElement('div');
+                  price.className='service-card-price';
+                  var action=card.querySelector('button, a');
+                  if(action) card.insertBefore(price,action); else card.appendChild(price);
+                }
+                price.textContent=label;
+                price.style.cssText='display:block!important;visibility:visible!important;opacity:1!important;color:#f5f5f5!important;font-size:24px!important;line-height:1.4!important;margin:22px 0 12px!important;min-height:34px!important;';
+              });
+            }
+            function start(){
+              forceCanadianPrice();
+              var root=document.getElementById('cvTypeGrid')||document.body;
+              new MutationObserver(forceCanadianPrice).observe(root,{childList:true,subtree:true,attributes:true});
+              var country=document.getElementById('countrySelect');
+              if(country) country.addEventListener('change',forceCanadianPrice);
+            }
+            if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start,{once:true}); else start();
+          })();
+          </script>`;
+            if(!html.includes('</body>')) throw new Error('Could not find </body> in production index.html');
+            html=html.replace('</body>',script+'\\n</body>');
+            fs.writeFileSync(file,html);
+            console.log('Inserted forced Canadian CV visible price script into index.html');
+          } else console.log('Forced Canadian CV visible price script already exists');
+          NODE
+      - name: Commit and push
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then echo 'No changes'; else git commit -m 'Force visible Canadian CV starting price on service card' && git push; fi
