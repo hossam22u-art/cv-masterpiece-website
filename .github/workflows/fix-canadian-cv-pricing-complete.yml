@@ -20,8 +20,8 @@ jobs:
 
           const priceFunction = /function getPrice\(serviceId,country,language,option\)\{[^}]*\} function formatPrice/;
           const replacement = "function getPrice(serviceId,country,language,option){if(serviceId==='canadian-cv'){const marketPrices={EG:{English:250,French:350,'Other languages':350},AE:{English:35,French:45,'Other languages':45},SA:{English:35,French:45,'Other languages':45}};const fixed=marketPrices[country]?.[language];if(fixed!==undefined)return fixed}const s=db.services.find(x=>x.id===serviceId);if(!s)return null;const keys=[\u0060\u0024{country}|\u0024{language}|\u0024{option}\u0060,\u0060\u0024{country}|\u0024{language}|*\u0060,\u0060\u0024{country}|*|\u0024{option}\u0060,\u0060\u0024{country}|*|*\u0060];for(const k of keys){const v=s.prices?.[k];if(v!==undefined&&v!==null&&v!==''&&Number.isFinite(Number(v))&&Number(v)>=0)return Number(v)}return null} function formatPrice";
-          if (priceFunction.test(html)) {
-            html = html.replace(priceFunction, replacement);
+          if (priceStart >= 0 && priceEnd > priceStart) {
+            html = html.slice(0, priceStart) + replacement + html.slice(priceEnd + 1);
             console.log('Updated Canadian CV price lookup to use approved market/language prices first.');
           } else {
             throw new Error('Could not safely locate getPrice function. No website changes made.');
