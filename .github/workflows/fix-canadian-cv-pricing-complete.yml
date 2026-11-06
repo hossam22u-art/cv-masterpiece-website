@@ -1,0 +1,76 @@
+name: Fix Canadian CV pricing across cards and order form
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-canadian-cv-pricing-complete.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fix-pricing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply Canadian CV prices consistently
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const file = 'index.html.html';
+          let html = fs.readFileSync(file, 'utf8');
+
+          const priceFunction = /function getPrice\(serviceId,country,language,option\)\{[^}]*\} function formatPrice/;
+          const replacement = "function getPrice(serviceId,country,language,option){if(serviceId==='canadian-cv'){const marketPrices={EG:{English:250,French:350,'Other languages':350},AE:{English:35,French:45,'Other languages':45},SA:{English:35,French:45,'Other languages':45}};const fixed=marketPrices[country]?.[language];if(fixed!==undefined)return fixed}const s=db.services.find(x=>x.id===serviceId);if(!s)return null;const keys=[\u0060\u0024{country}|\u0024{language}|\u0024{option}\u0060,\u0060\u0024{country}|\u0024{language}|*\u0060,\u0060\u0024{country}|*|\u0024{option}\u0060,\u0060\u0024{country}|*|*\u0060];for(const k of keys){const v=s.prices?.[k];if(v!==undefined&&v!==null&&v!==''&&Number.isFinite(Number(v))&&Number(v)>=0)return Number(v)}return null} function formatPrice";
+          if (priceFunction.test(html)) {
+            html = html.replace(priceFunction, replacement);
+            console.log('Updated Canadian CV price lookup to use approved market/language prices first.');
+          } else {
+            throw new Error('Could not safely locate getPrice function. No website changes made.');
+          }
+
+          const oldCardLookup = "const val=service.prices?.[\u0060\u0024{market}|\u0024{lang}|\u0024{opt}\u0060];if(val!==undefined&&val!==null){prices.push(\u0060\u0024{lang}: \u0024{formatPrice(val,market)}\u0060);break;}";
+          const newCardLookup = "const val=getPrice(t.id,market,lang,opt);if(val!==null){prices.push(\u0060\u0024{lang}: \u0024{formatPrice(val,market)}\u0060);break;}";
+          if (html.includes(oldCardLookup)) {
+            html = html.replace(oldCardLookup, newCardLookup);
+            console.log('Updated Canadian CV service card to use the same price lookup as the order form.');
+          } else if (html.includes(newCardLookup)) {
+            console.log('Service card already uses shared price lookup.');
+          } else {
+            throw new Error('Could not safely locate service card price lookup. No website changes made.');
+          }
+
+          const serviceStart = html.indexOf('"id":"canadian-cv"');
+          if (serviceStart < 0) throw new Error('Canadian CV service definition not found.');
+          const serviceEnd = html.indexOf('}},', serviceStart);
+          if (serviceEnd < 0) throw new Error('Canadian CV price object boundary not found.');
+          const serviceChunk = html.slice(serviceStart, serviceEnd + 2);
+          const additions = {
+            'AE|English|One language': 35,
+            'AE|French|One language': 45,
+            'AE|Other languages|One language': 45
+          };
+          let updatedChunk = serviceChunk;
+          for (const [key, value] of Object.entries(additions)) {
+            const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            if (!new RegExp('"' + escaped + '"\\s*:').test(updatedChunk)) {
+              updatedChunk = updatedChunk.replace(/"prices":\{/, '"prices":{ "' + key + '":' + value + ',');
+            }
+          }
+          if (updatedChunk !== serviceChunk) {
+            html = html.slice(0, serviceStart) + updatedChunk + html.slice(serviceEnd + 2);
+            console.log('Added UAE Canadian CV prices to the service definition.');
+          } else {
+            console.log('UAE Canadian CV prices already exist in service definition.');
+          }
+
+          fs.writeFileSync(file, html);
+          console.log('Canadian CV prices: Egypt 250/350 EGP; UAE 35/45 AED; Saudi 35/45 SAR.');
+          NODE
+      - name: Remove temporary inspection workflows
+        run: rm -f .github/workflows/inspect-canadian-current.yml .github/workflows/inspect-canadian-order-flow.yml .github/workflows/inspect-canadian-handlers.yml
+      - name: Commit website fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html.html .github/workflows
+          git commit -m "Fix Canadian CV prices across service cards and order form"
+          git push
