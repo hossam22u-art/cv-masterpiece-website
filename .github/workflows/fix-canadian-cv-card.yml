@@ -18,8 +18,8 @@ jobs:
           const file='index.html.html';
           let html=fs.readFileSync(file,'utf8');
           const bt=String.fromCharCode(96);
-          const card=bt+"<div class=\\"service-card-price\\">From ${market==='EG'?'EGP 250.00':market==='AE'?'AED 35.00':'SAR 35.00'}</div>"+bt;
-          const normal=bt+"<div class=\\"service-card-price\\">From ${formatPrice(Math.min(...vals),market)}</div>"+bt;
+          const card=bt+"<div class='service-card-price'>From ${market==='EG'?'EGP 250.00':market==='AE'?'AED 35.00':'SAR 35.00'}</div>"+bt;
+          const normal=bt+"<div class='service-card-price'>From ${formatPrice(Math.min(...vals),market)}</div>"+bt;
           const replacement="const price=s.id==='canadian-cv'?"+card+":(vals.length?"+normal+":'');";
           const re=/const canadianFallback=s\.id==='canadian-cv'\?[\s\S]*?;const price=s\.id==='canadian-cv'\?[\s\S]*?:canadianFallback;/;
           if(re.test(html)){html=html.replace(re,replacement);fs.writeFileSync(file,html);console.log('Canadian CV card price replaced with direct display.');}
