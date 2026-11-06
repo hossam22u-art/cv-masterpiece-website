@@ -1,0 +1,22 @@
+name: Inspect Canadian CV card renderer
+on:
+  push:
+    paths:
+      - '.github/workflows/inspect-canadian-card-renderer.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print relevant renderer snippets
+        run: |
+          node <<'NODE'
+          const fs=require('fs'); const h=fs.readFileSync('index.html.html','utf8');
+          for (const term of ['canadian-cv','service-card-price']) {
+            let p=-1,n=0;
+            while ((p=h.indexOf(term,p+1))>=0 && n++<30) console.log('TERM '+term+' #'+n+'\n'+h.slice(Math.max(0,p-500),Math.min(h.length,p+900))+'\n---');
+          }
+          NODE
