@@ -21,19 +21,27 @@ jobs:
           const fixed = 'function formatPrice(';
           if (html.includes(broken)) {
             html = html.replace(broken, fixed);
-            console.log('Repaired the JavaScript syntax error.');
-          } else if (html.includes(fixed)) {
-            console.log('The duplicated declaration is not present.');
+            console.log('Repaired the duplicated function declaration.');
           } else {
-            throw new Error('Could not locate the expected price formatter declaration.');
+            console.log('The suspected duplicated declaration was not found; checking script syntax only.');
           }
-          new Function(html.match(/<script>([\\s\\S]*?)<\\/script>/i)?.[1] || (() => { throw new Error('Main script tag not found'); })());
+          const scriptTagStart = html.indexOf('<script');
+          if (scriptTagStart < 0) throw new Error('Script tag not found.');
+          const scriptStart = html.indexOf('>', scriptTagStart) + 1;
+          const scriptEnd = html.indexOf('</script>', scriptStart);
+          if (scriptStart <= 0 || scriptEnd < 0) throw new Error('Could not extract the main script.');
+          new Function(html.slice(scriptStart, scriptEnd));
           fs.writeFileSync(file, html);
+          console.log('Main script syntax check passed.');
           NODE
       - name: Commit repair
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html.html
-          git commit -m "Repair pricing script syntax error"
-          git push
+          if git diff --cached --quiet; then
+            echo "No source changes to commit."
+          else
+            git commit -m "Repair pricing script syntax"
+            git push
+          fi
