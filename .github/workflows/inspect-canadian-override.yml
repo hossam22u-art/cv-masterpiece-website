@@ -1,0 +1,19 @@
+name: Inspect Canadian price override
+on:
+  push:
+    paths:
+      - '.github/workflows/inspect-canadian-override.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print Canadian data and override context
+        run: |
+          node <<'NODE'
+          const fs=require('fs');const h=fs.readFileSync('index.html.html','utf8');
+          for(const [a,b] of [[20614500,20616600],[20663500,20667500],[20595000,20602000]]) console.log('\nRANGE '+a+'-'+b+'\n'+h.slice(a,b).replace(/\s+/g,' '));
+          NODE
