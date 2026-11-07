@@ -1,0 +1,20 @@
+name: Diagnose Meta Purchase event triggers
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/diagnose-meta-purchase-trigger.yml'
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Find all browser Purchase event triggers and related order flow
+        run: |
+          node <<'NODE'
+          const fs=require('fs');const h=fs.readFileSync('index.html','utf8');
+          const terms=["fbq('track','Purchase'","fbq('track', 'Purchase'","trackSingle","event_name: 'Purchase'","event_name:'Purchase'","Purchase","SubscribedButtonClick","payment_status","payment_verified_by","orderForm"];
+          for(const term of terms){console.log('\\n===== '+term+' =====');let p=-1,n=0;while((p=h.indexOf(term,p+1))>=0&&n<15){console.log('--- '+(++n)+' @'+p+' ---');console.log(h.slice(Math.max(0,p-450),Math.min(h.length,p+750)).replace(/\\s+/g,' '));}}
+          NODE
